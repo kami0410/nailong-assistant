@@ -84,6 +84,7 @@ contextBridge.exposeInMainWorld('widget', {
   agentCfgGet: () => ipcRenderer.invoke('agent-cfg-get'),
   agentCfgSave: (c) => ipcRenderer.invoke('agent-cfg-save', c),
   agentTest: () => ipcRenderer.invoke('agent-test'),
+  agentDetectModel: () => ipcRenderer.invoke('agent-detect-model'),
   agentShot: () => ipcRenderer.invoke('agent-shot'),
   agentSend: (p) => ipcRenderer.invoke('agent-send', p),
   agentConfirm: (p) => ipcRenderer.invoke('agent-confirm', p),

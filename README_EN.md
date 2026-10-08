@@ -1,14 +1,15 @@
 <div align="center">
 
-<img src="docs/screens/pet.png" width="170" alt="Nailong Assistant">
+<img src="docs/screens/pet.png" width="160" alt="Nailong Assistant">
 
 # Nailong Assistant (奶蛙助手)
 
-**A tiny frog that lives on your Windows desktop: schedule reminders · liquid-glass planner · AI computer-use assistant · mini-games**
+**A tiny frog that lives on your desktop — it can see your screen and use your mouse & keyboard. An AI computer-use assistant that happens to be a desktop pet.**
 
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11-0078D4?logo=windows&logoColor=white)](#)
 [![Electron](https://img.shields.io/badge/Electron-44-47848F?logo=electron&logoColor=white)](#)
 [![License](https://img.shields.io/badge/License-MIT-3DA639)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/wangyiding645/nailong-assistant?color=orange)](../../releases)
 [![Stars](https://img.shields.io/github/stars/wangyiding645/nailong-assistant?style=social)](https://github.com/wangyiding645/nailong-assistant/stargazers)
 
 [简体中文](README.md) · [English](README_EN.md)
@@ -17,72 +18,90 @@
 
 ---
 
-## What is this?
+## 🤖 Core: the AI computer-use assistant
 
-**Nailong Assistant** is a desktop pet that actually does things:
+> Most "AI assistants" only chat. **This one actually drives your computer.**
 
-- Nags you (kindly) about your schedule — with a 5-minute heads-up, red flashing bubble and a happy dance when you finish everything
-- Ships a **liquid-glass planner**: clock, calendar, countdown chips, check-in streak
-- Right-click to switch between **four forms**: AI computer-use assistant / countdown / alarm / coin flip
-- Plays **"Catch the Frog"**: it runs around your screen and dodges your cursor
-- **Drop a file onto it** — it asks first, then sends it to the Recycle Bin with a victory spin
+It sends a screenshot of your desktop to a multimodal LLM, and then **really** moves the mouse, clicks, types, presses hotkeys, scrolls and launches apps — step by step: act → screenshot → verify → continue, until the job is done.
 
-> Everything works offline. Only the AI assistant needs your own OpenAI-compatible endpoint.
+Say *"open Notepad and write tomorrow's meeting note, save it to Desktop"* and it does exactly that.
 
----
+### What it can do
 
-## ✨ Features
-
-### 🐸 The pet
-- 9 animation sets: idle / run left / run right / wave / belly-laugh / failed / waiting / review / **working** (suit + laptop)
-- Drag to move (animation follows direction), position is remembered
-- Hover = wave + show today's schedule; click = open planner
-- Always on top, comes back automatically after `Win + D`
-
-### 📅 Schedule & reminders
-- `schedule.txt`: `HH:MM|text` (daily) or `YYYY-MM-DD HH:MM|text` (one-off)
-- On time: red flashing bubble + jumping + chime · 5 min before: gentle pre-alert
-- All done → celebration (laugh animation + sound)
-
-### 🪟 Liquid-glass planner
-- Live clock, calendar month view with Chinese holiday labels, countdown chips
-- Check off items, progress bar, **streak counter**
-- 5 glass themes; draggable, remembered position, real blurred-wallpaper backdrop
-
-### 🎛️ Right-click forms
-
-| Form | What it does |
+| Tool | Description |
 | --- | --- |
-| 🐸 Normal | Pet + reminders |
-| 🤖 **Assistant** | AI computer use (below) |
-| ⏳ Countdown | Quick 1/3/5/10/25 min + custom; live timer chip; 3-note chime at zero |
-| ⏰ Alarm | Set hour/minute; two-tone ringing loop; click the frog to stop |
-| 🪙 Coin flip | Enter two options, it decides for you (or click the frog) |
-| 🏃 Catch the frog | Mini-game: bounces off edges, **turns and flees when your cursor gets close**, lap timer |
+| 📷 `screenshot` | Capture and understand the screen (coordinates are in screenshot pixels) |
+| 🖱 `click` / `dblclick` / `rightclick` | Click at any screen coordinate |
+| ⌨️ `type` | Type text into the focused window (CJK supported via clipboard) |
+| ⚡ `key` | Keys & combos: `enter`, `esc`, `ctrl+s`, `win+r`, `alt+tab`, `f5`… |
+| 🖲 `scroll` | Scroll up/down |
+| ⏳ `wait` | Wait for UI to load |
+| 🚀 `launch` | Launch an app or URL: `notepad`, `explorer`, `https://…` |
 
-### 🤖 AI computer-use assistant
-- Sees your screen (screenshots → multimodal model) and **really** drives mouse & keyboard: click / double-click / right-click / type / hotkeys / scroll / wait / launch
-- **Step-by-step confirm** (default) or **auto** mode
-- Safety: API key encrypted at rest with Windows DPAPI (`safeStorage`); **all pet windows are hidden during screenshots** so the AI never clicks itself or computes wrong coordinates; system prompt forbids destructive actions
-- Works with any OpenAI-style API (OpenAI, DeepSeek, Qwen, Kimi, local Ollama…)
+### Three steps to use it
+
+1. **Summon**: right-click the frog → **🤖 Assistant** (it changes into a suit-and-laptop work pose 🤵)
+2. **Configure**: click **⚙** — **only Base URL + API Key are required** → *Save & test*
+3. **Ask**: type your request and hit send
+
+> ✅ **Minimal setup = 2 fields.** Leave the model empty and it auto-detects one from `/models` (preferring vision-capable models) and fills it in for you.
+
+### Two execution modes
+
+| Mode | Behaviour | When |
+| --- | --- | --- |
+| 🛡 **Confirm each step** (default) | Every action is shown first; you click *Execute / Skip / Auto for this task* | First runs, sensitive work |
+| ⚡ **Auto** | Runs the whole task without asking | Trusted, repetitive tasks |
+
+### Safety design
+
+- 🔐 **Keys never leave your machine** — encrypted with Windows DPAPI (`safeStorage`), never uploaded, always shown as `••••••`
+- 🕶 **The frog hides itself during screenshots** — so the AI never clicks the assistant UI or miscalculates coordinates
+- 🧭 **Interruptible** — confirm mode by default; skip or stop anytime; every action is logged in the chat
+- 🚫 **Hard limits in the system prompt** — no deleting files, payments, sending messages or system changes without asking you first
+
+### Example prompts
+
+| Goal | Say |
+| --- | --- |
+| Read the screen | "Look at my screen and tell me what the open app is doing" |
+| Fill a form | "Open https://example.com and fill in my email xxx@qq.com" |
+| Automate typing | "Open Notepad, write 'meeting at 9am', save to Desktop as note.txt" |
+| Search | "Open Bing, search for today's weather and read it to me" |
+| Diagnose | "Is there any error dialog on screen? Read it and dismiss it" |
 
 <p align="center"><img src="docs/screens/panel.png" width="320" alt="Planner"> <img src="docs/screens/tool.png" width="320" alt="Tools"> <img src="docs/screens/menu.png" width="200" alt="Forms"></p>
 
-### 🗑️ Drag-to-recycle
-Drop files/folders on the frog → if the icon is on your desktop, **it runs over to the icon** and asks there → confirm → moved to the Recycle Bin (recoverable) + spin & laugh; cancel → it walks home.
+---
 
-<p align="center"><img src="docs/screens/recycle.png" width="280" alt="Recycle confirm"> <img src="docs/screens/catch.png" width="400" alt="Catch"></p>
+## 🐸 And it's a decent desktop pet too
+
+- 9 animation sets (idle / run / wave / belly-laugh / **suit & laptop while the assistant is open**), drag to move, position memory
+- Hover = wave + today's schedule; click = planner
+- Always on top; comes back after `Win + D`
+
+### 📅 Schedule & reminders
+- `schedule.txt`: `HH:MM|text` (daily) or `YYYY-MM-DD HH:MM|text` (one-off)
+- On time: red flashing bubble + jump + chime · 5-minute heads-up · celebration when the day is cleared
+
+### 🪟 Liquid-glass planner
+- Live clock, calendar with holiday labels, countdown chips, check-off, streak counter
+- 5 glass themes, real blurred wallpaper backdrop, draggable & remembered
+
+### 🎛️ Right-click forms
+🤖 Assistant · ⏳ Countdown · ⏰ Alarm · 🪙 Coin flip · 🏃 Catch the frog (it flees your cursor!)
+
+### 🗑️ Drag-to-recycle
+Drop files on the frog → if the icon is on your desktop, **it runs over to the icon** and asks there → confirm → Recycle Bin + spin & laugh.
+
+<p align="center"><img src="docs/screens/recycle.png" width="280" alt="Recycle"> <img src="docs/screens/catch.png" width="400" alt="Catch"></p>
 
 ---
 
 ## 🚀 Quick start
 
-### Option A — Download the portable build (recommended)
-1. Grab `nailong-assistant-vX.Y.Z-win-x64.zip` from [**Releases**](../../releases)
-2. Extract anywhere (a non-system drive is recommended, e.g. `D:\nailong-assistant`)
-3. Double-click `奶蛙助手.bat` (make a desktop shortcut if you like)
-
-No installer, no registry writes. Uninstall = delete the folder.
+### Option A — Portable build (recommended)
+Download `nailong-assistant-vX.Y.Z-win-x64.exe` from [**Releases**](../../releases) and run it. No installer, no registry writes.
 
 ### Option B — From source
 ```bash
@@ -91,19 +110,7 @@ cd nailong-assistant
 npm install     # only Electron
 npm start
 ```
-Requires Windows 10/11 + Node.js 18+.
-
----
-
-## 🤖 Configure the AI assistant
-
-Right-click the frog → Assistant → ⚙, fill in and hit **Save & test**:
-
-| Field | Example |
-| --- | --- |
-| Base URL | `https://api.openai.com/v1`, `https://api.deepseek.com/v1`, … |
-| API Key | stored encrypted locally, shown as `••••••` |
-| Model | must accept images, e.g. `gpt-4o-mini`, `qwen-vl-max` |
+Windows 10/11 + Node.js 18+.
 
 ---
 
@@ -113,22 +120,22 @@ Right-click the frog → Assistant → ⚙, fill in and hit **Save & test**:
 <summary><b>Architecture</b></summary>
 
 - Electron 44, frameless transparent always-on-top windows (pet / planner / assistant / tools / menu)
-- Plain local data files (`schedule.txt`, `countdown.txt`, `state.json`) — hand-editable, git-friendly
-- `preload.js` contextBridge only; renderers have no Node access
-- `native/*.ps1` handles OS-level chores: z-order pinning, restore after Win+D, DPI-aware input injection, wallpaper blur sampling, desktop icon coordinates, Recycle Bin
+- Plain local data files — hand-editable, git-friendly; renderers have no Node access (contextBridge only)
+- The AI loop lives in the **main process**: `screenshot → tool_call → execute → feed back screenshot → decide`, using standard OpenAI function calling
+- `native/*.ps1` handles OS chores: z-order pinning, restore after Win+D, DPI-aware input injection, wallpaper blur sampling, desktop icon coordinates, Recycle Bin
 
 </details>
 
 <details>
 <summary><b>Gotchas we hit (so you don't)</b></summary>
 
-1. `setPosition` on a transparent frameless window **grows it by ~1px per call** → always move with `setBounds`
-2. Windows PowerShell 5.1 mis-decodes BOM-less `.ps1` containing CJK → keep scripts ASCII, pass titles as arguments
-3. "Semi-transparent belly" pixels in the sprite sheet let the wallpaper bleed through → force interior alpha to 255
+1. `setPosition` on a transparent frameless window **grows it ~1px per call** → always move with `setBounds`
+2. Windows PowerShell 5.1 mis-decodes BOM-less `.ps1` with CJK → keep scripts ASCII, pass titles as arguments
+3. Semi-transparent pixels in the sprite sheet let the wallpaper bleed through → force interior alpha to 255
 4. On Win11 the desktop icon list is **not** a direct child of `Progman` → enumerate all `SysListView32` and require a `Progman/WorkerW` ancestor
-5. Cross-process `LVM_GETITEMRECT` needs the address `VirtualAllocEx base + offset` (forgetting the base returns zeros)
+5. Cross-process `LVM_GETITEMRECT` needs `VirtualAllocEx base + offset` (forgetting the base returns zeros)
 6. Screenshots would capture our own windows → `setOpacity(0)` them during capture
-7. Assistant losing focus during automation → 📌 pin (`screen-saver` level + visible on fullscreen + watchdog)
+7. Assistant loses focus during automation → 📌 pin (`screen-saver` level + visible on fullscreen + watchdog)
 
 </details>
 
@@ -136,21 +143,21 @@ Right-click the frog → Assistant → ⚙, fill in and hit **Save & test**:
 
 ## 🗺️ Roadmap
 
+- [ ] More assistant abilities: clipboard, batch rename, scheduled tasks
 - [ ] NSIS installer + auto-update
-- [ ] More forms & mini-games (pomodoro, water reminder)
+- [ ] More forms & mini-games
 - [ ] Multi-monitor / multi-DPI polish
-- [ ] ICS import/export
 - [ ] English UI (i18n)
 
 ## ⚠️ Disclaimer
 
-The AI assistant **really controls your mouse and keyboard**. Use step-by-step confirm mode first and never let it handle payments or deletions. Recycle uses the system Recycle Bin (recoverable), but double-check before confirming.
+The assistant **really controls your mouse and keyboard**. Use confirm mode first and never let it handle payments or deletions. Recycle uses the system Recycle Bin (recoverable), but double-check before confirming. API costs are on your account.
 
 ## 🙏 Credits
 
-- Character animations / sound: from the nailong asset library provided by the author. If you are the original artist and want different attribution or licensing, please open an issue.
+- Character animations / sound from the nailong asset library; if you are the original artist and want different attribution or licensing, please open an issue.
 - Inspired by desktop pets, Tamagotchi and "computer use" agents.
 
 ## 📄 License
 
-[MIT](LICENSE) © 2026 nailong-assistant contributors
+[MIT](LICENSE) © 2026 wangyiding645

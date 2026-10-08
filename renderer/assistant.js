@@ -100,16 +100,30 @@ async function loadCfg() {
 async function saveCfg() {
   const baseUrl = $('cfgBase').value.trim();
   const key = $('cfgKey').value.trim();
-  const model = $('cfgModel').value.trim();
-  if (!baseUrl || !model || (!key && !S.cfg.hasKey)) {
+  let model = $('cfgModel').value.trim();
+  if (!baseUrl || (!key && !S.cfg.hasKey)) {
     $('setupStatus').className = 'err';
-    $('setupStatus').textContent = '请把 Base URL、API Key、模型名都填上';
+    $('setupStatus').textContent = '填上 Base URL 和 API Key 就能用（模型可留空）';
     return;
   }
   $('setupStatus').className = '';
   $('setupStatus').textContent = '保存中…';
   S.cfg = await api.agentCfgSave({ baseUrl: baseUrl, key: key, model: model });
   $('cfgKey').value = '••••••••••••';
+  if (!model) {
+    $('setupStatus').textContent = '未填模型，正在自动检测…';
+    const d = await api.agentDetectModel();
+    if (d && d.ok && d.model) {
+      model = d.model;
+      $('cfgModel').value = model;
+      S.cfg = await api.agentCfgSave({ baseUrl: baseUrl, key: '', model: model });
+      $('setupStatus').textContent = '已自动选择模型：' + model;
+    } else {
+      $('setupStatus').className = 'err';
+      $('setupStatus').textContent = '自动检测失败：' + ((d && d.error) || '请手动填写模型名');
+      return;
+    }
+  }
   $('setupStatus').textContent = '正在测试连接…';
   const r = await api.agentTest();
   if (r && r.ok) {

@@ -120,8 +120,9 @@
       <div class="view hidden" id="setup">
         <div class="fld"><label>Base URL（OpenAI 兼容）</label><input id="cfgBase" placeholder="https://api.openai.com/v1"></div>
         <div class="fld"><label>API Key</label><input id="cfgKey" type="password" placeholder="sk-..."></div>
-        <div class="fld"><label>模型名</label><input id="cfgModel" placeholder="gpt-4o-mini / deepseek-chat / qwen-vl-max"></div>
-        <div class="hint">· 密钥用 Windows 本机加密保存，不会上传（只有调用时发给该服务商）<br>
+        <div class="fld"><label>模型名（可留空，自动检测）</label><input id="cfgModel" placeholder="留空自动挑选；需支持图片输入"></div>
+        <div class="hint">· 只需填 <b>Base URL</b> + <b>API Key</b> 即可，模型名留空会自动从 /models 里挑一个<br>
+          · 密钥用 Windows 本机加密保存，不会上传（只有调用时发给该服务商）<br>
           · 助手默认半自动：每个电脑操作都先让你确认<br>
           · 按需截图：只有你打开「附带截图」或让它看屏幕时才截屏</div>
         <div class="btn" id="saveCfg">保存并测试连接</div>

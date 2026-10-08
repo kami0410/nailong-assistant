@@ -210,6 +210,45 @@ async function callChat(messages, useTools) {
   return (data && data.choices && data.choices[0] && data.choices[0].message) || {};
 }
 
+function pickModel(list) {
+  const ids = (Array.isArray(list) ? list : []).map((m) => m && (m.id || m.name)).filter((s) => typeof s === 'string' && s);
+  if (!ids.length) { return ''; }
+  const prefer = [/vl/i, /vision/i, /gpt-4o/i, /gpt-4\.1/i, /omni/i, /claude/i, /gemini/i, /flash/i, /qwen/i, /deepseek/i];
+  for (let i = 0; i < prefer.length; i++) {
+    const hit = ids.find((id) => prefer[i].test(id));
+    if (hit) { return hit; }
+  }
+  return ids[0];
+}
+
+async function fetchModels() {
+  if (!agentCfg.baseUrl || !agentCfg.key) { throw new Error('请先填写 Base URL 和 API Key'); }
+  const url = agentCfg.baseUrl.replace(/\/+$/, '') + '/models';
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 30000);
+  let res;
+  try {
+    res = await fetch(url, {
+      signal: ctrl.signal,
+      headers: {
+        'Authorization': 'Bearer ' + agentCfg.key,
+        'User-Agent': 'nailong-assistant/1.0',
+        'x-opencode-session': agentSessionId
+      }
+    });
+  } catch (e) {
+    clearTimeout(timer);
+    throw new Error('连接失败：' + String(e.message || e));
+  }
+  clearTimeout(timer);
+  if (!res.ok) { throw new Error('模型列表接口返回 ' + res.status); }
+  const data = await res.json();
+  const list = (data && (data.data || data.models)) || [];
+  const model = pickModel(list);
+  if (!model) { throw new Error('没能从 /models 取到模型，请手动填写模型名'); }
+  return model;
+}
+
 function parseArgs(tc) {
   try { return JSON.parse((tc.function && tc.function.arguments) || '{}'); } catch (e) { return {}; }
 }
@@ -1220,6 +1259,15 @@ ipcMain.handle('agent-test', async () => {
   }
 });
 
+ipcMain.handle('agent-detect-model', async () => {
+  try {
+    const model = await fetchModels();
+    return { ok: true, model: model };
+  } catch (err) {
+    return { ok: false, error: String(err.message || err) };
+  }
+});
+
 ipcMain.handle('agent-shot', async () => {
   try {
     const s = await captureShot();
@@ -1390,6 +1438,16 @@ app.whenReady().then(() => {
   createPopupWindow();
   createAssistantWindow();
   if (process.env.WIDGET_DEBUG === '1') {
+    if (process.env.WIDGET_AGENT_DETECT === '1') {
+      setTimeout(async () => {
+        try {
+          const m = await fetchModels();
+          logLine('[detect] model=' + m);
+        } catch (e) {
+          logLine('[detect] err ' + String(e.message || e));
+        }
+      }, 4000);
+    }
     if (process.env.WIDGET_PET_POPUP === '1') {
       setTimeout(() => {
         if (!popWin || popWin.isDestroyed()) { return; }
