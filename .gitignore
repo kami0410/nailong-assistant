@@ -1,0 +1,34 @@
+# deps
+node_modules/
+
+# runtime / user data (never commit)
+.userdata/
+.cache/
+agent.json
+*.cfg
+schedule.txt
+countdown.txt
+state.json
+*.log
+
+# debug artifacts
+debug_*.json
+debug_shot.jpg
+
+# build output
+dist/
+release/
+out/
+
+# retired code
+_old/
+
+# os / editor
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/
+
+# asset before/after backups
+*.orig.png

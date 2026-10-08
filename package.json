@@ -1,0 +1,14 @@
+{
+  "name": "naifrog-assistant",
+  "productName": "奶蛙助手",
+  "version": "2.0.0",
+  "private": true,
+  "description": "奶蛙助手 — 桌面日程桌宠 + AI 助手 (liquid glass)",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^44.5.1"
+  }
+}

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>奶蛙形态</title>
+<style>
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    overflow: hidden; background: transparent; cursor: default;
+    font-family: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+    color: #fff6e0; -webkit-user-select: none; user-select: none;
+  }
+  #card {
+    position: absolute; left: 6px; top: 6px; right: 6px; bottom: 6px;
+    border-radius: 20px; overflow: hidden; display: flex; flex-direction: column;
+    background: rgba(96, 68, 20, 0.72);
+    box-shadow: 0 14px 34px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,242,205,0.30);
+    border: 1px solid rgba(255,238,195,0.28);
+    padding: 8px 8px 16px;
+    box-sizing: border-box;
+  }
+  #title { font-size: 10.5px; letter-spacing: 2px; color: rgba(255,225,165,0.75); padding: 2px 6px 6px; }
+  .item {
+    display: flex; align-items: center; height: 34px; border-radius: 12px;
+    padding: 0 10px; margin: 1px 0; cursor: pointer;
+    color: #fff3d8; font-size: 12.5px;
+    transition: background-color 0.13s;
+  }
+  .item:hover { background: rgba(255,235,180,0.16); }
+  .item .ico { width: 22px; font-size: 14px; text-align: center; flex: none; }
+  .item .tx { flex: 1; }
+  .item .ck { font-size: 11px; color: rgba(255,240,205,0.55); }
+  .item.cur { background: rgba(246,199,88,0.88); color: #4a3a12; font-weight: 600; }
+  .item.cur .ck { color: #6a521c; }
+  .sep { height: 1px; margin: 4px 8px; background: rgba(255,238,195,0.18); }
+</style>
+</head>
+<body>
+  <div id="card">
+    <div id="title">切 换 奶 蛙 形 态</div>
+    <div class="item" data-mode="normal"><span class="ico">🐸</span><span class="tx">普通形态</span><span class="ck"></span></div>
+    <div class="sep"></div>
+    <div class="item" data-mode="assistant"><span class="ico">🤖</span><span class="tx">奶蛙助手</span><span class="ck"></span></div>
+    <div class="item" data-mode="countdown"><span class="ico">⏳</span><span class="tx">倒计时奶娃</span><span class="ck"></span></div>
+    <div class="item" data-mode="alarm"><span class="ico">⏰</span><span class="tx">闹钟奶娃</span><span class="ck"></span></div>
+    <div class="item" data-mode="coin"><span class="ico">🪙</span><span class="tx">抛硬币奶娃</span><span class="ck"></span></div>
+    <div class="sep"></div>
+    <div class="item" data-mode="catch"><span class="ico">🏃</span><span class="tx">抓奶蛙</span><span class="ck"></span></div>
+  </div>
+  <script src="menu.js"></script>
+</body>
+</html>

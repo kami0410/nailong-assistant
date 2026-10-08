@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>奶蛙助手</title>
+<style>
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    overflow: hidden; background: transparent; cursor: default;
+    font-family: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+    color: #fff; -webkit-user-select: none; user-select: none;
+  }
+  #bubble {
+    position: absolute; left: 4px; right: 4px; top: 0; max-height: 124px;
+    padding: 8px 11px; border-radius: 14px; overflow: hidden;
+    background: rgba(92,62,12,0.62);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,240,200,0.28);
+    font-size: 12px; line-height: 1.65; opacity: 0; transform: translateY(4px);
+    transition: opacity 0.22s, transform 0.22s;
+    z-index: 1; cursor: pointer;
+  }
+  #bubble.show { opacity: 1; transform: translateY(0); }
+  #bubble .bi { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #bubble .bi .t { color: rgba(255,224,155,0.75); font-family: Consolas, monospace; font-size: 11px; margin-right: 6px; }
+  #bubble .bi .x { color: #fff6e0; }
+  #bubble .bi.now .t { color: #ffb37a; }
+  #bubble .bi.now .x { color: #ffffff; font-weight: 600; }
+  #bubble .more { color: rgba(255,240,205,0.55); font-size: 11px; }
+  #bubble .askbtns { display: flex; gap: 6px; margin-top: 6px; }
+  #bubble .askbtns .ab { flex: 1; height: 24px; line-height: 24px; text-align: center; border-radius: 12px;
+    font-size: 11.5px; cursor: pointer; white-space: nowrap; }
+  #bubble .askbtns .yes { background: rgba(214,52,36,0.92); color: #fff; font-weight: 600; }
+  #bubble .askbtns .yes:hover { background: rgba(232,74,56,1); }
+  #bubble .askbtns .no { background: rgba(255,235,180,0.16); color: rgba(255,240,205,0.9); }
+  #bubble .askbtns .no:hover { background: rgba(255,235,180,0.28); }
+  #bubble.drop-hint { background: rgba(30,116,68,0.88); }
+  #bubble.flash { background: rgba(214, 52, 36, 0.88); animation: bflash 0.7s infinite; }
+  @keyframes bflash { 50% { background: rgba(255, 92, 70, 0.95); } }
+  #pet {
+    position: absolute; left: 50%; bottom: 0; width: 96px; height: 104px;
+    margin-left: -48px; z-index: 2; cursor: pointer;
+    background-image: url('../assets/naifrog/web-spritesheet.png');
+    background-size: 768px 936px; background-repeat: no-repeat;
+    background-position: 0 0;
+    filter: drop-shadow(0 6px 10px rgba(0,0,0,0.35));
+  }
+  #pet.bounce { animation: bounce 0.5s ease 2; }
+  @keyframes bounce { 50% { transform: translateY(-10px); } }
+  #pet.spin { animation: spin 0.9s linear; }
+  @keyframes spin { 0% { transform: rotate(0deg) scale(1); } 50% { transform: rotate(360deg) scale(1.12); } 100% { transform: rotate(720deg) scale(1); } }
+  #chip {
+    position: absolute; left: 50%; bottom: 108px; transform: translateX(-50%);
+    padding: 3px 10px; border-radius: 11px; z-index: 3; white-space: nowrap;
+    background: rgba(92,62,12,0.72); color: #fff6e0; font-size: 11px; letter-spacing: 0.5px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,240,200,0.25);
+    opacity: 0; transition: opacity 0.25s; pointer-events: none;
+  }
+  #chip.show { opacity: 1; }
+  #chip.hot { background: rgba(214, 52, 36, 0.9); animation: bflash 0.7s infinite; }
+  #chip .m { font-family: Consolas, monospace; font-size: 11.5px; }
+  #ring {
+    position: absolute; left: 50%; bottom: 2px; width: 120px; height: 120px;
+    margin-left: -60px; border-radius: 50%; z-index: 1; opacity: 0;
+    background: radial-gradient(circle, rgba(124,196,127,0.45) 0%, rgba(124,196,127,0.0) 62%);
+    transition: opacity 0.3s;
+  }
+  #ring.on { opacity: 1; animation: ringpulse 1.8s ease-in-out infinite; }
+  @keyframes ringpulse { 50% { opacity: 0.55; } }
+  body.t1 #bubble { background: rgba(255, 252, 240, 0.88); }
+  body.t1 #bubble .bi .x { color: rgba(40,32,12,0.95); }
+  body.t1 #bubble .bi .t { color: rgba(10,90,200,0.75); }
+  body.t1 #bubble .bi.now .x { color: #c02626; }
+  body.t1 #bubble .bi.now .t { color: #c02626; }
+  body.t1 #bubble .more { color: rgba(40,32,12,0.45); }
+  body.t2 #bubble { background: rgba(58, 36, 8, 0.82); }
+  body.t2 #bubble .bi .x { color: #ffe9c9; }
+  body.t2 #bubble .bi .t { color: rgba(255,200,130,0.75); }
+  body.t3 #bubble { background: rgba(6, 48, 60, 0.82); }
+  body.t3 #bubble .bi .x { color: #eafdff; }
+  body.t3 #bubble .bi .t { color: rgba(140,230,245,0.78); }
+  body.t4 #bubble { background: rgba(46, 22, 88, 0.84); }
+  body.t4 #bubble .bi .x { color: #f4ecff; }
+  body.t4 #bubble .bi .t { color: rgba(215,175,255,0.78); }
+</style>
+</head>
+<body class="t0">
+  <div id="ring"></div>
+  <div id="bubble"></div>
+  <div id="chip"></div>
+  <div id="pet"></div>
+  <script src="logic.js"></script>
+  <script src="pet.js"></script>
+</body>
+</html>

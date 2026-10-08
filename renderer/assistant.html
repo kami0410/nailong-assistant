@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>奶蛙助手 · 对话</title>
+<style>
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    overflow: hidden; background: transparent; cursor: default;
+    font-family: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+    color: #fff6e0; -webkit-user-select: none; user-select: none;
+  }
+  #card {
+    position: absolute; left: 10px; top: 10px; right: 10px; bottom: 10px;
+    border-radius: 26px; overflow: hidden;
+    background: rgba(96, 68, 20, 0.55);
+    box-shadow: 0 16px 42px rgba(0,0,0,0.40), inset 0 1px 0 rgba(255,242,205,0.30);
+    border: 1px solid rgba(255,238,195,0.26);
+  }
+  #backdrop { position: absolute; left: -10px; top: -10px; width: 380px; height: 560px; object-fit: cover; }
+  #tint { position: absolute; left: 0; top: 0; right: 0; bottom: 0;
+    background: linear-gradient(180deg, rgba(196,148,38,0.34), rgba(112,78,16,0.50)); }
+  #content { position: absolute; left: 0; top: 0; right: 0; bottom: 0; padding: 12px; display: flex; flex-direction: column; }
+
+  #topbar { display: flex; align-items: center; height: 32px; -webkit-app-region: drag; flex: none; }
+  #avatar { width: 28px; height: 28px; border-radius: 50%; flex: none;
+    background-image: url('../assets/naifrog/web-spritesheet.png');
+    background-size: 768px 936px; background-position: -35px -3px;
+    border: 1px solid rgba(255,240,200,0.40); box-shadow: 0 2px 8px rgba(0,0,0,0.28); }
+  #topbar .label { flex: 1; font-size: 11px; letter-spacing: 2px; color: rgba(255,225,165,0.8); margin-left: 10px; }
+  .icobtn { width: 22px; height: 22px; line-height: 22px; text-align: center; font-size: 12px;
+    color: rgba(255,240,205,0.65); border-radius: 50%; cursor: pointer; margin-left: 6px; -webkit-app-region: no-drag;
+    transition: background-color 0.15s, color 0.15s; }
+  .icobtn:hover { color: #fff6e0; background: rgba(255,235,180,0.14); }
+  #pin.on { color: #17330f; background: rgba(124,196,127,0.92); }
+  #pin.on:hover { background: rgba(150,215,150,1); }
+
+  .view { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  .view.hidden { display: none; }
+
+  #setup .fld { margin-top: 10px; }
+  #setup .fld label { display: block; font-size: 11px; color: rgba(255,236,190,0.7); margin: 0 4px 4px; }
+  #setup input {
+    width: 100%; box-sizing: border-box; height: 34px; padding: 0 12px; border: none; border-radius: 12px;
+    background: rgba(255,225,160,0.14); color: #fff6e0; font-size: 12.5px; outline: none;
+    box-shadow: inset 0 1px 0 rgba(255,238,190,0.18);
+  }
+  #setup input::placeholder { color: rgba(255,240,205,0.35); }
+  #setup .hint { margin-top: 12px; font-size: 11px; line-height: 1.7; color: rgba(255,240,205,0.62); }
+  #setup .btn { margin-top: 14px; height: 36px; line-height: 36px; text-align: center; border-radius: 18px;
+    background: rgba(246,199,88,0.92); color: #4a3a12; font-weight: 600; font-size: 13px; cursor: pointer; }
+  #setup .btn:hover { background: rgba(252,212,110,1); }
+  #setupStatus { margin-top: 10px; font-size: 11.5px; line-height: 1.6; color: rgba(255,236,190,0.85); min-height: 18px; }
+  #setupStatus.err { color: #ffb3a0; }
+
+  #msgs { flex: 1; overflow-y: auto; min-height: 0; padding: 6px 2px; }
+  #msgs::-webkit-scrollbar { width: 4px; }
+  #msgs::-webkit-scrollbar-thumb { background: rgba(255,235,180,0.22); border-radius: 2px; }
+  .msg { max-width: 86%; margin: 6px 0; padding: 8px 11px; border-radius: 14px; font-size: 12.5px;
+    line-height: 1.65; white-space: pre-wrap; word-break: break-word; }
+  .msg.user { margin-left: auto; background: rgba(246,199,88,0.88); color: #4a3a12; border-bottom-right-radius: 6px; }
+  .msg.bot { margin-right: auto; background: rgba(255,255,255,0.12); color: #fff6e0; border-bottom-left-radius: 6px;
+    box-shadow: inset 0 1px 0 rgba(255,238,190,0.16); }
+  .msg.sys { margin-left: auto; margin-right: auto; font-size: 11px; color: rgba(255,240,205,0.55); background: transparent; }
+  .msg .shot { display: block; margin-top: 6px; max-width: 150px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.2); }
+
+  #pending {
+    flex: none; margin: 6px 0 0; padding: 8px 10px; border-radius: 14px;
+    background: rgba(255,120,90,0.20); border: 1px solid rgba(255,160,130,0.45);
+    font-size: 12px; line-height: 1.5;
+  }
+  #pending .desc { color: #ffe9c9; }
+  #pending .acts { margin-top: 8px; display: flex; gap: 8px; }
+  #pending .ab { flex: 1; height: 30px; line-height: 30px; text-align: center; border-radius: 15px;
+    font-size: 12px; cursor: pointer; }
+  #execBtn { background: rgba(124,196,127,0.92); color: #17330f; font-weight: 600; }
+  #execBtn:hover { background: rgba(150,215,150,1); }
+  #skipBtn { background: rgba(255,235,180,0.16); color: rgba(255,240,205,0.85); }
+  #skipBtn:hover { background: rgba(255,235,180,0.26); }
+
+  #foot { flex: none; padding-top: 8px; }
+  #toolbar { display: flex; align-items: center; padding: 0 2px 6px; }
+  #shotToggle { font-size: 11px; padding: 0 10px; height: 24px; line-height: 24px; border-radius: 12px;
+    background: rgba(255,235,180,0.12); color: rgba(255,240,205,0.7); cursor: pointer;
+    border: 1px solid rgba(255,235,180,0.22); }
+  #shotToggle.on { background: rgba(124,196,127,0.85); color: #17330f; font-weight: 600; border-color: transparent; }
+  #modeToggle { font-size: 11px; padding: 0 10px; height: 24px; line-height: 24px; border-radius: 12px; margin-left: 6px;
+    background: rgba(255,235,180,0.12); color: rgba(255,240,205,0.7); cursor: pointer;
+    border: 1px solid rgba(255,235,180,0.22); }
+  #modeToggle.on { background: rgba(255,140,90,0.88); color: #3a1c0c; font-weight: 600; border-color: transparent; }
+  #status { flex: 1; text-align: right; font-size: 10.5px; color: rgba(255,240,205,0.55); }
+  #status .sb { cursor: pointer; margin-left: 8px; color: rgba(255,240,205,0.75); }
+  #status .sb:hover { color: #fff6e0; }
+  #inputRow { display: flex; gap: 8px; }
+  #msgInput {
+    flex: 1; height: 36px; padding: 0 12px; border: none; border-radius: 18px;
+    background: rgba(255,225,160,0.14); color: #fff6e0; font-size: 12.5px; outline: none;
+    box-shadow: inset 0 1px 0 rgba(255,238,190,0.18);
+  }
+  #msgInput::placeholder { color: rgba(255,240,205,0.35); }
+  #sendBtn { width: 64px; height: 36px; line-height: 36px; text-align: center; border-radius: 18px;
+    background: rgba(246,199,88,0.92); color: #4a3a12; font-weight: 600; font-size: 13px; cursor: pointer; }
+  #sendBtn:hover { background: rgba(252,212,110,1); }
+  #sendBtn.busy { opacity: 0.5; cursor: default; }
+</style>
+</head>
+<body>
+  <div id="card">
+    <img id="backdrop" alt="">
+    <div id="tint"></div>
+    <div id="content">
+      <div id="topbar">
+        <div id="avatar"></div>
+        <div class="label">奶 蛙 助 手</div>
+        <div class="icobtn" id="pin" title="图钉：钉住窗口不被遮挡／不被误关">📌</div>
+        <div class="icobtn" id="gear" title="接口设置">⚙</div>
+        <div class="icobtn" id="close" title="收起（右键奶蛙可再次唤出）">✕</div>
+      </div>
+
+      <div class="view hidden" id="setup">
+        <div class="fld"><label>Base URL（OpenAI 兼容）</label><input id="cfgBase" placeholder="https://api.openai.com/v1"></div>
+        <div class="fld"><label>API Key</label><input id="cfgKey" type="password" placeholder="sk-..."></div>
+        <div class="fld"><label>模型名</label><input id="cfgModel" placeholder="gpt-4o-mini / deepseek-chat / qwen-vl-max"></div>
+        <div class="hint">· 密钥用 Windows 本机加密保存，不会上传（只有调用时发给该服务商）<br>
+          · 助手默认半自动：每个电脑操作都先让你确认<br>
+          · 按需截图：只有你打开「附带截图」或让它看屏幕时才截屏</div>
+        <div class="btn" id="saveCfg">保存并测试连接</div>
+        <div id="setupStatus"></div>
+      </div>
+
+      <div class="view hidden" id="chat">
+        <div id="msgs"></div>
+        <div id="pending" style="display:none">
+          <div class="desc" id="pendingDesc"></div>
+          <div class="acts"><div class="ab" id="execBtn">执行</div><div class="ab" id="skipBtn">跳过</div><div class="ab" id="autoBtn">本任务自动</div></div>
+        </div>
+        <div id="foot">
+          <div id="toolbar">
+            <span id="shotToggle" title="开启后发送消息时会附带一张当前屏幕截图">📷 附带截图</span>
+            <span id="modeToggle" title="点一下切换：每步确认 / 整个任务自动执行">每步确认</span>
+            <span id="status"></span>
+          </div>
+          <div id="inputRow">
+            <input id="msgInput" placeholder="让奶蛙帮你做点什么，例如：看一下屏幕，帮我把微信里未读消息数报给我">
+            <div id="sendBtn">发送</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="assistant.js"></script>
+</body>
+</html>

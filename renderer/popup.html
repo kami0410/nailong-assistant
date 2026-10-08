@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>奶蛙面板</title>
+<style>
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    overflow: hidden; background: transparent; cursor: default;
+    font-family: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+    color: #fff; -webkit-user-select: none; user-select: none;
+  }
+  #card {
+    position: absolute; left: 10px; top: 10px; right: 10px; bottom: 10px;
+    border-radius: 26px; overflow: hidden;
+    box-shadow: 0 16px 42px rgba(0,0,0,0.40), inset 0 1px 0 rgba(255,242,205,0.30);
+    border: 1px solid rgba(255,238,195,0.26);
+  }
+  #backdrop { position: absolute; left: -10px; top: -10px; width: 330px; height: 452px; object-fit: cover; }
+  #tint { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+  #content {
+    position: absolute; left: 0; top: 0; right: 0; bottom: 0;
+    padding: 12px; display: flex; flex-direction: column;
+  }
+  #topbar { display: flex; align-items: center; height: 34px; -webkit-app-region: drag; }
+  #avatar {
+    width: 30px; height: 30px; border-radius: 50%; flex: none; -webkit-app-region: no-drag; cursor: pointer;
+    background-image: url('../assets/naifrog/web-spritesheet.png');
+    background-size: 768px 936px; background-position: -35px -3px;
+    border: 1px solid rgba(255,240,200,0.40);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.35);
+  }
+  #topbar .label { flex: 1; font-size: 11px; letter-spacing: 2px; color: rgba(255,225,165,0.75); margin-left: 10px; }
+  .icobtn {
+    width: 22px; height: 22px; line-height: 22px; text-align: center;
+    font-size: 11px; color: rgba(255,240,205,0.65); border-radius: 50%;
+    cursor: pointer; margin-left: 6px; -webkit-app-region: no-drag;
+    transition: background-color 0.15s, color 0.15s;
+  }
+  .icobtn:hover { color: #fff6e0; background: rgba(255,235,180,0.14); }
+  #soundbtn.off { color: rgba(255,240,205,0.32); }
+  #head { text-align: center; padding: 4px 0 4px; }
+  #clock { font-size: 28px; font-weight: 300; letter-spacing: 1px; line-height: 33px;
+    font-family: "Segoe UI Semilight", "Segoe UI", sans-serif; color: #ffe9a8;
+    text-shadow: 0 1px 3px rgba(60,40,0,0.45); }
+  #date { font-size: 10.5px; letter-spacing: 1.2px; color: rgba(255,240,205,0.80);
+    text-shadow: 0 1px 2px rgba(60,40,0,0.35); }
+
+  #cdstrip { display: flex; gap: 6px; overflow-x: auto; padding: 6px 2px 2px; flex: none; }
+  #cdstrip::-webkit-scrollbar { height: 0; }
+  .cdchip {
+    flex: none; position: relative; height: 24px; line-height: 24px; padding: 0 10px;
+    border-radius: 12px; font-size: 11px; color: #fff6e0;
+    background: rgba(124,196,127,0.20);
+    border: 1px solid rgba(160,220,160,0.30);
+    white-space: nowrap; cursor: default;
+  }
+  .cdchip b { color: #b6f0b8; font-weight: 600; margin-left: 4px; }
+  .cdchip.today { background: rgba(246,199,88,0.30); border-color: rgba(255,225,150,0.45); }
+  .cdchip.today b { color: #ffe9a8; }
+  .cdchip .cdx { display: none; margin-left: 6px; color: rgba(255,200,200,0.8); cursor: pointer; }
+  .cdchip:hover .cdx { display: inline; }
+  .cdchip.add { background: rgba(255,235,180,0.12); border-style: dashed; border-color: rgba(255,235,180,0.35); cursor: pointer; }
+  .cdchip.add:hover { background: rgba(255,235,180,0.20); }
+
+  .view { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow-y: auto; }
+  .view.hidden { display: none; }
+  .view::-webkit-scrollbar { width: 0; }
+
+  #listHead { display: flex; align-items: center; padding: 2px 2px 6px; flex: none; }
+  #listTitle { flex: 1; font-size: 11px; color: rgba(255,232,175,0.85); letter-spacing: 0.5px; }
+  #listTitle .hol { color: #ff9a7a; margin-left: 6px; }
+  .linkbtn { font-size: 11px; color: rgba(255,232,175,0.70); cursor: pointer; padding: 2px 8px;
+    border-radius: 10px; background: rgba(255,235,180,0.10); }
+  .linkbtn:hover { background: rgba(255,235,180,0.20); color: #fff6e0; }
+
+  #list { flex: 1; overflow-y: auto; overflow-x: hidden; min-height: 0; padding-right: 2px; }
+  #list::-webkit-scrollbar { width: 4px; }
+  #list::-webkit-scrollbar-thumb { background: rgba(255,235,180,0.22); border-radius: 2px; }
+  .row {
+    position: relative; min-height: 36px; line-height: 36px; margin-bottom: 6px;
+    padding: 0 30px 0 38px; border-radius: 18px; overflow: hidden;
+    background: rgba(255,204,115,0.14);
+    box-shadow: inset 0 1px 0 rgba(255,238,190,0.22);
+  }
+  .row.past { opacity: 0.52; }
+  .row .chk {
+    position: absolute; left: 10px; top: 9px; width: 18px; height: 18px; border-radius: 50%;
+    border: 1.5px solid rgba(255,230,170,0.55); cursor: pointer; line-height: 18px; text-align: center;
+    font-size: 11px; color: transparent; transition: background-color 0.15s, color 0.15s;
+  }
+  .row .chk:hover { background: rgba(255,235,180,0.18); }
+  .row.done .chk { background: rgba(124,196,127,0.85); border-color: rgba(160,220,160,0.9); color: #204020; }
+  .row .time { display: inline-block; width: 42px; margin-right: 8px; vertical-align: middle;
+    font-size: 11px; color: rgba(255,222,150,0.72); font-family: Consolas, monospace; }
+  .row .txt { font-size: 12.5px; color: #fff6e0; text-shadow: 0 1px 2px rgba(60,40,0,0.35); }
+  .row.done .txt { color: rgba(235,235,215,0.55); text-decoration: line-through; }
+  .row .tag { font-size: 9px; color: rgba(140,220,145,0.9); margin-left: 6px; }
+  .row .del { position: absolute; right: 8px; top: 0; width: 22px; height: 36px; line-height: 36px;
+    text-align: center; font-size: 11px; color: rgba(255,238,195,0.45); cursor: pointer;
+    opacity: 0; transition: opacity 0.15s, color 0.15s; }
+  .row:hover .del { opacity: 1; }
+  .row .del:hover { color: #ff9a7a; }
+  .empty { padding-top: 36px; text-align: center; font-size: 12px; line-height: 22px;
+    color: rgba(255,240,205,0.70); }
+
+  #progress { flex: none; padding: 6px 2px 2px; }
+  #progress .bar { height: 6px; border-radius: 3px; background: rgba(255,235,180,0.15); overflow: hidden; }
+  #progress .fill { height: 100%; width: 0%; border-radius: 3px; background: linear-gradient(90deg, rgba(246,199,88,0.95), rgba(124,196,127,0.95)); transition: width 0.3s; }
+  #progress .txt { margin-top: 4px; font-size: 10.5px; color: rgba(255,232,175,0.75); display: flex; }
+  #progress .txt .l { flex: 1; }
+  #progress .txt .r { color: rgba(160,220,160,0.9); }
+  #footer { padding: 8px 0 0; text-align: center; flex: none; }
+  #addbtn {
+    display: inline-block; padding: 0 20px; height: 32px; line-height: 32px;
+    border-radius: 16px; font-size: 13px; color: #4a3a12; cursor: pointer; font-weight: 600;
+    background: rgba(246,199,88,0.90); box-shadow: inset 0 1px 0 rgba(255,255,255,0.45), 0 3px 10px rgba(120,80,0,0.25);
+    transition: background-color 0.15s;
+  }
+  #addbtn:hover { background: rgba(252,212,110,1); }
+
+  #calHead { display: flex; align-items: center; flex: none; padding: 0 2px 2px; }
+  #calTitle { flex: 1; text-align: center; font-size: 13px; color: #ffe9a8; letter-spacing: 1px; }
+  .navbtn { width: 26px; height: 26px; line-height: 26px; text-align: center; border-radius: 50%;
+    cursor: pointer; color: rgba(255,240,205,0.75); font-size: 14px; }
+  .navbtn:hover { background: rgba(255,235,180,0.14); color: #fff6e0; }
+  #calWeek { display: flex; flex: none; }
+  #calWeek div { flex: 1; text-align: center; font-size: 10px; color: rgba(255,232,175,0.60); padding: 1px 0 2px; }
+  #calGrid { display: flex; flex-wrap: wrap; flex: 1; align-content: flex-start; }
+  .calcell {
+    width: 14.28%; height: 40px; display: flex; flex-direction: column; align-items: center;
+    justify-content: flex-start; padding-top: 2px; cursor: pointer; border-radius: 10px;
+  }
+  .calcell:hover { background: rgba(255,235,180,0.10); }
+  .calcell .d { font-size: 11.5px; color: rgba(255,246,224,0.92); width: 21px; height: 21px; line-height: 21px; text-align: center; border-radius: 11px; }
+  .calcell.other .d { color: rgba(255,246,224,0.28); }
+  .calcell.today .d { box-shadow: inset 0 0 0 1.5px rgba(246,199,88,0.95); }
+  .calcell.sel .d { background: rgba(246,199,88,0.95); color: #4a3a12; font-weight: 700; }
+  .calcell .dots { height: 6px; margin-top: 2px; display: flex; gap: 3px; }
+  .calcell .dot { width: 4px; height: 4px; border-radius: 2px; background: rgba(246,199,88,0.95); }
+  .calcell .dot.cd { background: rgba(124,196,127,0.95); }
+  .calcell .hol { font-size: 8px; color: #ff9a7a; margin-top: 1px; transform: scale(0.92); }
+
+  #viewAdd .addhead { text-align: center; font-size: 12px; color: rgba(255,255,255,0.6); padding: 0 0 2px; }
+  #datechip {
+    display: inline-block; padding: 0 12px; height: 26px; line-height: 26px; border-radius: 13px;
+    font-size: 12px; color: #fff6e0; background: rgba(255,225,160,0.14); cursor: pointer;
+    border: 1px solid rgba(255,235,180,0.25);
+  }
+  #datechip:hover { background: rgba(255,225,160,0.22); }
+  #repeatRow { padding: 6px 0 0; }
+  .repchip { display: inline-block; padding: 0 12px; height: 24px; line-height: 24px; border-radius: 12px;
+    font-size: 11px; margin: 0 4px; color: rgba(255,240,205,0.65); background: rgba(255,235,180,0.10); cursor: pointer; }
+  .repchip.on { background: rgba(246,199,88,0.85); color: #4a3a12; font-weight: 600; }
+  #wheelRow { position: relative; height: 130px; display: flex; justify-content: center; align-items: center; }
+  .wheel {
+    width: 76px; height: 120px; overflow-y: scroll; scroll-snap-type: y mandatory;
+  }
+  .wheel::-webkit-scrollbar { display: none; }
+  .wheel .wsp { height: 45px; }
+  .wheel .wi { height: 30px; line-height: 30px; text-align: center; scroll-snap-align: center;
+    font-size: 15px; color: rgba(255,232,175,0.38); cursor: pointer;
+    font-family: Consolas, monospace; transition: color 0.15s, font-size 0.15s; }
+  .wheel .wi.on { color: #fff6e0; font-size: 19px; font-weight: 600; }
+  #colon { width: 12px; text-align: center; font-size: 18px; color: rgba(255,240,205,0.75); }
+  #wheelBand {
+    position: absolute; left: 50%; width: 168px; margin-left: -84px; top: 50px; height: 30px;
+    border-radius: 10px; background: rgba(255,215,130,0.14);
+    box-shadow: inset 0 1px 0 rgba(255,238,190,0.25);
+    pointer-events: none;
+  }
+  #preview { text-align: center; font-size: 12px; color: rgba(255,240,205,0.85); padding: 0 0 4px;
+    font-family: Consolas, monospace; }
+  #txtin {
+    height: 34px; margin: 0 8px; padding: 0 12px; border: none; border-radius: 17px;
+    background: rgba(255,225,160,0.13); color: #fff6e0; font-size: 13px; outline: none;
+    text-align: center; box-shadow: inset 0 1px 0 rgba(255,238,190,0.18);
+  }
+  #txtin::placeholder { color: rgba(255,240,205,0.38); }
+  #addActions { display: flex; gap: 10px; padding: 8px 8px 0; }
+  #addActions .abtn {
+    flex: 1; height: 34px; line-height: 34px; text-align: center; border-radius: 17px;
+    font-size: 13px; cursor: pointer; transition: background-color 0.15s;
+  }
+  #cancelbtn { background: rgba(255,235,180,0.12); color: rgba(255,240,205,0.85); }
+  #cancelbtn:hover { background: rgba(255,235,180,0.20); }
+  #okbtn { background: rgba(246,199,88,0.90); color: #4a3a12; font-weight: 600;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.45), 0 3px 10px rgba(120,80,0,0.25); }
+  #okbtn:hover { background: rgba(252,212,110,1); }
+  .err { box-shadow: inset 0 0 0 1.5px rgba(255,110,90,0.95) !important; }
+
+  body.t0 #tint { background: linear-gradient(180deg, rgba(196,148,38,0.34), rgba(112,78,16,0.46)); }
+  body.t1 #tint { background: linear-gradient(180deg, rgba(255,255,255,0.46), rgba(228,235,245,0.36)); }
+  body.t2 #tint { background: linear-gradient(180deg, rgba(120,72,18,0.40), rgba(70,40,8,0.46)); }
+  body.t3 #tint { background: linear-gradient(180deg, rgba(16,90,110,0.40), rgba(6,50,64,0.48)); }
+  body.t4 #tint { background: linear-gradient(180deg, rgba(88,48,150,0.42), rgba(48,22,90,0.50)); }
+
+  body.t1 #clock { color: #1d1d1f; text-shadow: 0 1px 2px rgba(255,255,255,0.35); }
+  body.t1 #date { color: rgba(30,34,42,0.72); }
+  body.t1 .row { background: rgba(255,255,255,0.30); box-shadow: inset 0 1px 0 rgba(255,255,255,0.55); }
+  body.t1 .row .time { color: rgba(10,90,200,0.80); }
+  body.t1 .row .txt { color: rgba(20,22,28,0.92); text-shadow: none; }
+  body.t1 .row .del { color: rgba(0,0,0,0.35); }
+  body.t1 #topbar .label { color: rgba(30,34,42,0.55); }
+  body.t1 .icobtn { color: rgba(30,34,42,0.60); }
+  body.t1 .wheel .wi { color: rgba(30,34,42,0.35); }
+  body.t1 .wheel .wi.on { color: #1d1d1f; }
+  body.t1 #preview { color: rgba(30,34,42,0.75); }
+  body.t1 #txtin { background: rgba(255,255,255,0.42); color: #1d1d1f; }
+  body.t1 #txtin::placeholder { color: rgba(30,34,42,0.35); }
+  body.t1 #cancelbtn { background: rgba(0,0,0,0.08); color: rgba(30,34,42,0.8); }
+  body.t1 .empty { color: rgba(30,34,42,0.6); }
+  body.t2 #clock { color: #ffe3b8; }
+  body.t3 #clock { color: #b8f2ff; }
+  body.t4 #clock { color: #e9dcff; }
+</style>
+</head>
+<body class="t0">
+  <div id="card">
+    <img id="backdrop" alt="">
+    <div id="tint"></div>
+    <div id="content">
+      <div id="topbar">
+        <div id="avatar" title="点击：恢复为自动跟随宠物"></div>
+        <div class="label">日 程 面 板</div>
+        <div class="icobtn" id="soundbtn" title="提醒音效开关">♪</div>
+        <div class="icobtn" id="themebtn" title="切换主题">色</div>
+        <div class="icobtn" id="close" title="退出程序">✕</div>
+      </div>
+      <div id="head">
+        <div id="clock">--:--:--</div>
+        <div id="date"></div>
+      </div>
+      <div id="cdstrip"></div>
+
+      <div class="view" id="viewList">
+        <div id="listHead">
+          <div id="listTitle"></div>
+          <div class="linkbtn" id="openCalBtn">日历</div>
+        </div>
+        <div id="list"></div>
+        <div id="progress">
+          <div class="bar"><div class="fill" id="progFill"></div></div>
+          <div class="txt"><span class="l" id="progText"></span><span class="r" id="streakText"></span></div>
+        </div>
+        <div id="footer"><span id="addbtn">＋ 添加日程</span></div>
+      </div>
+
+      <div class="view hidden" id="viewCal">
+        <div id="calHead">
+          <div class="navbtn" id="prevMonth">‹</div>
+          <div id="calTitle"></div>
+          <div class="navbtn" id="nextMonth">›</div>
+        </div>
+        <div id="calWeek"><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div><div>日</div></div>
+        <div id="calGrid"></div>
+        <div id="footer"><span class="linkbtn" id="backListBtn">返回列表</span></div>
+      </div>
+
+      <div class="view hidden" id="viewAdd">
+        <div class="addhead" id="addTitle">添加日程</div>
+        <div style="text-align:center"><span id="datechip"></span></div>
+        <div id="repeatRow" style="text-align:center">
+          <span class="repchip" id="repToday">仅这一天</span>
+          <span class="repchip on" id="repDaily">每天重复</span>
+        </div>
+        <div id="wheelRow">
+          <div class="wheel" id="wHour"></div>
+          <div id="colon">:</div>
+          <div class="wheel" id="wMin"></div>
+          <div id="wheelBand"></div>
+        </div>
+        <div id="preview">--:--</div>
+        <input id="txtin" maxlength="40" placeholder="事项内容">
+        <div id="addActions">
+          <div class="abtn" id="cancelbtn">取消</div>
+          <div class="abtn" id="okbtn">确认添加</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="logic.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
