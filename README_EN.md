@@ -9,7 +9,7 @@
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11-0078D4?logo=windows&logoColor=white)](#)
 [![Electron](https://img.shields.io/badge/Electron-44-47848F?logo=electron&logoColor=white)](#)
 [![License](https://img.shields.io/badge/License-MIT-3DA639)](LICENSE)
-[![Stars](https://img.shields.io/github/stars/__OWNER__/nailong-assistant?style=social)](https://github.com/__OWNER__/nailong-assistant/stargazers)
+[![Stars](https://img.shields.io/github/stars/wangyiding645/nailong-assistant?style=social)](https://github.com/wangyiding645/nailong-assistant/stargazers)
 
 [简体中文](README.md) · [English](README_EN.md)
 
@@ -86,7 +86,7 @@ No installer, no registry writes. Uninstall = delete the folder.
 
 ### Option B — From source
 ```bash
-git clone https://github.com/__OWNER__/nailong-assistant.git
+git clone https://github.com/wangyiding645/nailong-assistant.git
 cd nailong-assistant
 npm install     # only Electron
 npm start

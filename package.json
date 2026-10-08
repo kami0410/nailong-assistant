@@ -1,14 +1,57 @@
 {
-  "name": "naifrog-assistant",
+  "name": "nailong-assistant",
   "productName": "奶蛙助手",
   "version": "2.0.0",
   "private": true,
-  "description": "奶蛙助手 — 桌面日程桌宠 + AI 助手 (liquid glass)",
+  "description": "一只住在 Windows 桌面上的奶蛙：日程提醒 + 液态玻璃日程面板 + AI 电脑助手(computer use) + 抓奶蛙/倒计时/闹钟/抛硬币 + 拖文件回收",
   "main": "main.js",
+  "author": "wangyiding645",
+  "license": "MIT",
+  "homepage": "https://github.com/wangyiding645/nailong-assistant",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wangyiding645/nailong-assistant.git"
+  },
+  "bugs": {
+    "url": "https://github.com/wangyiding645/nailong-assistant/issues"
+  },
+  "keywords": [
+    "desktop-pet",
+    "electron",
+    "windows",
+    "schedule",
+    "reminder",
+    "computer-use",
+    "ai-assistant",
+    "liquid-glass",
+    "tamagotchi"
+  ],
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "dist": "npx --yes electron-builder --win portable"
   },
   "devDependencies": {
     "electron": "^44.5.1"
+  },
+  "build": {
+    "appId": "com.nailong.assistant",
+    "productName": "奶蛙助手",
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**",
+      "native/**",
+      "assets/**",
+      "package.json"
+    ],
+    "win": {
+      "icon": "assets/icon.ico",
+      "target": [
+        "portable"
+      ]
+    },
+    "portable": {
+      "artifactName": "nailong-assistant-${version}-win-x64.exe"
+    }
   }
 }
