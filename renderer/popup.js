@@ -1,9 +1,18 @@
+'use strict';
+/* 日程面板：列表 / 日历 / 添加 / 统计 */
+
 const L = window.WidgetLogic;
+const T = window.WidgetTask;
+const R = window.WidgetRepeat;
+const NL = window.WidgetNl;
 const $ = (id) => document.getElementById(id);
-const THEMES = ['奶黄玻璃', '浅色玻璃', '琥珀玻璃', '科技青', '午夜紫'];
+const api = window.widget;
+const I = window.WidgetI18n || { t: (k) => k, setLocale() {}, applyDom() {} };
+
+const THEMES = ['奶黄玻璃', '浅色玻璃', '琥珀玻璃', '科技青', '午夜紫', '深空灰'];
 
 const state = {
-  allItems: [],
+  tasks: [],
   countdown: [],
   done: {},
   completedDays: [],
@@ -14,304 +23,16 @@ const state = {
   selectedDate: L.todayStr(),
   calY: 0,
   calM: 0,
-  addMode: 'item',
-  pickMode: null,
-  selH: 0,
-  selM: 0,
-  repeatDaily: true
+  quickParsed: null,
+  statsCache: null
 };
 
-function saveSchedule() { return window.widget.saveSchedule(L.serializeSchedule(state.allItems)); }
-function saveCountdown() { return window.widget.saveCountdown(L.serializeCountdown(state.countdown)); }
-function keyDone(date, key) { return (state.done[date] || []).indexOf(key) >= 0; }
-
-function applyState(s) {
-  if (!s) { return; }
-  state.done = s.done || {};
-  state.completedDays = s.completedDays || [];
-  state.streak = s.streak || 0;
-  if (s.settings) { state.settings = s.settings; }
-  renderSound();
-}
-
-function applyTheme(t) {
-  state.theme = t;
-  document.body.className = 't' + t;
-  $('themebtn').title = '主题：' + THEMES[t] + '（点击切换）';
-}
-
-function renderSound() {
-  $('soundbtn').className = 'icobtn' + (state.settings.sound ? '' : ' off');
-  $('soundbtn').title = state.settings.sound ? '提醒音效：开（点击关闭）' : '提醒音效：关（点击开启）';
-}
-
-function dateLabel(dateStr) {
-  const d = L.dateObj(dateStr);
-  if (!d) { return dateStr; }
-  const today = L.todayStr();
-  let s = (dateStr === today ? '今天 · ' : '') + (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + L.weekdayCn(d);
-  const hol = L.holiday(dateStr);
-  return { text: s, hol: hol };
-}
-
-function renderList() {
-  const info = dateLabel(state.selectedDate);
-  $('listTitle').innerHTML = L.esc(info.text) + (info.hol ? '<span class="hol">' + L.esc(info.hol) + '</span>' : '');
-  const items = L.itemsOn(state.allItems, state.selectedDate);
-  const list = $('list');
-  if (!items.length) {
-    list.innerHTML = '<div class="empty">这一天还没有日程<br>点下面添加</div>';
-    return;
-  }
-  let html = '';
-  for (let i = 0; i < items.length; i++) {
-    const it = items[i];
-    const k = L.keyOf(it);
-    const done = keyDone(state.selectedDate, k);
-    const past = state.selectedDate < L.todayStr() || (state.selectedDate === L.todayStr() && it.time < clockHM());
-    let cls = 'row' + (done ? ' done' : '') + (past && !done ? ' past' : '');
-    html += '<div class="' + cls + '" id="row_' + i + '">'
-      + '<span class="chk" id="chk_' + i + '">✓</span>'
-      + '<span class="time">' + L.esc(it.time) + '</span>'
-      + '<span class="txt">' + L.esc(it.text) + '</span>'
-      + (it.date === '' ? '<span class="tag">每天</span>' : '')
-      + '<span class="del" id="del_' + i + '" title="删除">✕</span></div>';
-  }
-  list.innerHTML = html;
-  for (let j = 0; j < items.length; j++) {
-    (function (idx) {
-      const c = $('chk_' + idx);
-      if (c) { c.onclick = () => toggleDone(L.keyOf(items[idx])); }
-      const d = $('del_' + idx);
-      if (d) { d.onclick = () => delAt(items[idx]); }
-    })(j);
-  }
-}
-
-async function toggleDone(key) {
-  const s = await window.widget.toggleDone({ date: state.selectedDate, key: key });
-  applyState(s);
-  renderList();
-  renderProgress();
-}
-
-async function delAt(it) {
-  const i = state.allItems.indexOf(it);
-  if (i >= 0) { state.allItems.splice(i, 1); }
-  await saveSchedule();
-  renderList();
-  renderProgress();
-}
-
-function renderProgress() {
-  const today = L.todayStr();
-  const items = L.itemsOn(state.allItems, today);
-  const doneCount = items.filter((it) => keyDone(today, L.keyOf(it))).length;
-  const pct = items.length ? Math.round(doneCount / items.length * 100) : 0;
-  $('progFill').style.width = pct + '%';
-  $('progText').textContent = items.length ? ('今日 ' + doneCount + '/' + items.length) : '今天还没有日程';
-  $('streakText').textContent = state.streak > 0 ? ('连签 ' + state.streak + ' 天') : '';
-}
-
-function renderCdStrip() {
-  const strip = $('cdstrip');
-  const cds = L.nextCountdowns(state.countdown, null, 6);
-  let html = '';
-  for (let i = 0; i < cds.length; i++) {
-    const cd = cds[i];
-    const d = L.dateObj(cd.date);
-    html += '<span class="cdchip' + (cd.days === 0 ? ' today' : '') + '" title="' + L.esc(cd.date) + '">'
-      + L.esc(cd.text) + '<b>' + (cd.days === 0 ? '今天' : cd.days + ' 天') + '</b>'
-      + '<span class="cdx" data-date="' + L.esc(cd.date) + '" data-text="' + L.esc(cd.text) + '">✕</span></span>';
-  }
-  html += '<span class="cdchip add" id="addCdChip">＋ 倒数日</span>';
-  strip.innerHTML = html;
-  const xs = strip.getElementsByTagName('span');
-  for (let j = 0; j < xs.length; j++) {
-    if (xs[j].className === 'cdx') {
-      xs[j].onclick = async function () {
-        const dt = this.getAttribute('data-date');
-        const tx = this.getAttribute('data-text');
-        state.countdown = state.countdown.filter((c) => !(c.date === dt && c.text === tx));
-        await saveCountdown();
-        renderCdStrip();
-      };
-    }
-  }
-  $('addCdChip').onclick = () => openAdd('cd');
-}
-
-function renderCal() {
-  const y = state.calY, m = state.calM;
-  $('calTitle').textContent = y + '年' + (m + 1) + '月';
-  const first = new Date(y, m, 1);
-  let lead = first.getDay() - 1;
-  if (lead < 0) { lead = 6; }
-  const start = new Date(y, m, 1 - lead);
-  const today = L.todayStr();
-  let html = '';
-  for (let i = 0; i < 42; i++) {
-    const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
-    const ds = L.fmtDateObj(d);
-    const other = d.getMonth() !== m;
-    const hasItem = L.datedOn(state.allItems, ds).length > 0;
-    const hasCd = state.countdown.some((c) => c.date === ds);
-    const hol = L.holiday(ds);
-    let cls = 'calcell' + (other ? ' other' : '') + (ds === today ? ' today' : '') + (ds === state.selectedDate ? ' sel' : '');
-    html += '<div class="' + cls + '" data-date="' + ds + '">'
-      + '<div class="d">' + d.getDate() + '</div>'
-      + '<div class="dots">' + (hasItem ? '<span class="dot"></span>' : '') + (hasCd ? '<span class="dot cd"></span>' : '') + '</div>'
-      + (hol ? '<div class="hol">' + L.esc(hol) + '</div>' : '')
-      + '</div>';
-  }
-  const grid = $('calGrid');
-  grid.innerHTML = html;
-  const cells = grid.getElementsByClassName('calcell');
-  for (let j = 0; j < cells.length; j++) {
-    cells[j].onclick = function () {
-      const ds = this.getAttribute('data-date');
-      state.selectedDate = ds;
-      if (state.pickMode) {
-        const mode = state.pickMode;
-        state.pickMode = null;
-        openAdd(mode);
-      } else {
-        showView('list');
-        renderList();
-      }
-    };
-  }
-}
-
-function showView(v) {
-  state.view = v;
-  $('viewList').className = 'view' + (v === 'list' ? '' : ' hidden');
-  $('viewCal').className = 'view' + (v === 'cal' ? '' : ' hidden');
-  $('viewAdd').className = 'view' + (v === 'add' ? '' : ' hidden');
-  $('cdstrip').style.display = (v === 'list') ? '' : 'none';
-}
-
-function buildWheel(el, count, pad) {
-  let html = '<div class="wsp"></div>';
-  for (let i = 0; i < count; i++) {
-    html += '<div class="wi">' + (pad ? L.pad2(i) : i) + '</div>';
-  }
-  html += '<div class="wsp"></div>';
-  el.innerHTML = html;
-}
-
-function setWheel(el, value, smooth) {
-  const items = el.querySelectorAll('.wi');
-  const idx = Math.max(0, Math.min(parseInt(value, 10), items.length - 1));
-  el.scrollTo({ top: idx * 30, behavior: smooth ? 'smooth' : 'auto' });
-}
-
-function readWheel(el) {
-  const items = el.querySelectorAll('.wi');
-  return Math.max(0, Math.min(Math.round(el.scrollTop / 30), items.length - 1));
-}
-
-function updateWheelClasses(el, idx) {
-  const items = el.querySelectorAll('.wi');
-  for (let i = 0; i < items.length; i++) {
-    items[i].className = 'wi' + (i === idx ? ' on' : '');
-  }
-}
-
-function bindWheel(el, onPick) {
-  let t = null;
-  el.addEventListener('scroll', () => {
-    if (t) { clearTimeout(t); }
-    t = setTimeout(() => {
-      const idx = readWheel(el);
-      updateWheelClasses(el, idx);
-      onPick(idx);
-    }, 120);
-  });
-  el.addEventListener('click', (e) => {
-    const item = e.target.closest('.wi');
-    if (!item) { return; }
-    const items = Array.prototype.slice.call(el.querySelectorAll('.wi'));
-    const idx = items.indexOf(item);
-    if (idx >= 0) { setWheel(el, idx, true); }
-  });
-}
-
-function updatePreview() {
-  $('preview').textContent = L.pad2(state.selH) + ':' + L.pad2(state.selM);
-}
-
-function updateDateChip() {
-  const d = L.dateObj(state.selectedDate);
-  $('datechip').textContent = (d.getMonth() + 1) + '月' + d.getDate() + '日 ▾';
-}
-
-function updateRepeatRow() {
-  const show = state.addMode === 'item' && state.selectedDate === L.todayStr();
-  $('repeatRow').style.display = show ? '' : 'none';
-  $('repToday').className = 'repchip' + (state.repeatDaily ? '' : ' on');
-  $('repDaily').className = 'repchip' + (state.repeatDaily ? ' on' : '');
-}
-
-function openAdd(mode) {
-  state.addMode = mode;
-  if (mode === 'item') {
-    const d = new Date();
-    let h = d.getHours(), m = d.getMinutes() + 5;
-    if (m >= 60) { m -= 60; h = (h + 1) % 24; }
-    m = Math.floor(m / 5) * 5;
-    state.selH = h;
-    state.selM = m;
-    setWheel($('wHour'), h, false);
-    setWheel($('wMin'), m, false);
-    updateWheelClasses($('wHour'), h);
-    updateWheelClasses($('wMin'), m);
-    updatePreview();
-    $('addTitle').textContent = '添加日程';
-    $('txtin').value = '';
-    $('txtin').placeholder = '事项内容';
-    $('wheelRow').style.display = '';
-    $('preview').style.display = '';
-  } else {
-    $('addTitle').textContent = '添加倒数日';
-    $('txtin').value = '';
-    $('txtin').placeholder = '倒数日名称（如：春节）';
-    $('wheelRow').style.display = 'none';
-    $('preview').style.display = 'none';
-  }
-  updateDateChip();
-  updateRepeatRow();
-  showView('add');
-  setTimeout(() => $('txtin').focus(), 100);
-}
-
-async function confirmAdd() {
-  const text = L.trim($('txtin').value);
-  if (text === '') {
-    $('txtin').classList.add('err');
-    setTimeout(() => $('txtin').classList.remove('err'), 900);
-    $('txtin').focus();
-    return;
-  }
-  if (state.addMode === 'cd') {
-    state.countdown.push({ date: state.selectedDate, text: text });
-    state.countdown.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
-    await saveCountdown();
-    renderCdStrip();
-  } else {
-    const daily = state.repeatDaily && state.selectedDate === L.todayStr();
-    state.allItems.push({
-      date: daily ? '' : state.selectedDate,
-      time: L.pad2(state.selH) + ':' + L.pad2(state.selM),
-      text: text
-    });
-    state.allItems.sort(L.byWhen);
-    await saveSchedule();
-    renderList();
-    renderProgress();
-  }
-  $('txtin').value = '';
-  showView('list');
+function toast(msg) {
+  const el = $('toast');
+  el.textContent = msg;
+  el.className = 'toast show';
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.className = 'toast'; }, 1800);
 }
 
 function clockHM() {
@@ -319,115 +40,441 @@ function clockHM() {
   return L.pad2(d.getHours()) + ':' + L.pad2(d.getMinutes());
 }
 
+function applyTheme(t) {
+  state.theme = Number(t) || 0;
+  document.body.className = 't' + state.theme;
+  $('themebtn').title = '主题：' + THEMES[state.theme] + '（点击切换）';
+}
+
+function renderSound() {
+  $('soundbtn').className = 'icobtn' + (state.settings.sound ? '' : '');
+  $('soundbtn').style.opacity = state.settings.sound ? '1' : '0.4';
+  $('soundbtn').title = state.settings.sound ? '提醒音效：开' : '提醒音效：关';
+}
+
+// ---------------------------------------------------------------- 列表
+function keyDone(date, key) { return (state.done[date] || []).indexOf(key) >= 0; }
+
+function itemsOf(date) { return T.itemsOn(state.tasks, date); }
+
+function renderProgress() {
+  const today = L.todayStr();
+  const items = itemsOf(today);
+  const doneCount = items.filter((it) => keyDone(today, T.keyOf(it))).length;
+  const pct = items.length ? Math.round(doneCount / items.length * 100) : 0;
+  $('progFill').style.width = pct + '%';
+  $('progText').textContent = items.length
+    ? I.t('panel.todayProgress', { done: doneCount, total: items.length, pct: pct })
+    : I.t('panel.noSchedule');
+  $('streakText').textContent = state.streak > 0 ? ('🔥 ' + I.t('panel.streak', { n: state.streak })) : '';
+}
+
+function renderList() {
+  const date = state.selectedDate;
+  const d = L.dateObj(date);
+  const hol = L.holiday(date);
+  const rel = L.daysBetween(L.todayStr(), date);
+  let title = date === L.todayStr() ? '今天' : (rel === 1 ? '明天' : (rel === -1 ? '昨天' : (d.getMonth() + 1) + '月' + d.getDate() + '日'));
+  $('listTitle').innerHTML = L.esc(title + ' · ' + L.weekdayCn(d)) + (hol ? ' <span class="badge warn">' + L.esc(hol) + '</span>' : '');
+
+  const items = itemsOf(date);
+  const list = $('list');
+  if (!items.length) {
+    list.innerHTML = '<div class="empty">' + I.t('panel.emptyDay') + '<br>' + I.t('panel.emptyDayHint') + '</div>';
+    return;
+  }
+  const now = clockHM();
+  let html = '';
+  items.forEach((it, i) => {
+    const k = T.keyOf(it);
+    const done = keyDone(date, k);
+    const past = date < L.todayStr() || (date === L.todayStr() && it.time < now);
+    const cls = 'row-item' + (done ? ' done' : '') + (past && !done ? ' past' : '');
+    const badges = [];
+    if (it.repeat) badges.push('<span class="badge">' + L.esc(R.describeRepeat(it.repeat)) + '</span>');
+    if (it.prio === 'high') badges.push('<span class="badge high">重要</span>');
+    if (it.tag) badges.push('<span class="badge">#' + L.esc(it.tag) + '</span>');
+    if (it.alarm) badges.push('<span class="badge">提前' + it.alarm + '分</span>');
+    html += '<div class="' + cls + '" data-i="' + i + '">'
+      + '<span class="chk" data-act="done" data-i="' + i + '">✓</span>'
+      + '<span class="time">' + L.esc(it.time) + '</span>'
+      + '<span class="txt" title="' + L.esc(it.text) + '">' + L.esc(it.text) + '</span>'
+      + (badges.length ? '<span style="display:flex;gap:3px;flex:none">' + badges.join('') + '</span>' : '')
+      + '<span class="act" data-act="edit" data-i="' + i + '" title="编辑">✎</span>'
+      + '<span class="del" data-act="del" data-i="' + i + '" title="删除">✕</span>'
+      + '</div>';
+  });
+  list.innerHTML = html;
+}
+
+async function onListClick(e) {
+  const el = e.target.closest ? e.target.closest('[data-act]') : null;
+  if (!el) return;
+  const i = parseInt(el.getAttribute('data-i'), 10);
+  const it = itemsOf(state.selectedDate)[i];
+  if (!it) return;
+  const act = el.getAttribute('data-act');
+  if (act === 'done') {
+    const s = await api.toggleDone({ date: state.selectedDate, key: T.keyOf(it) });
+    state.done = (s && s.done) || state.done;
+    state.completedDays = (s && s.completedDays) || state.completedDays;
+    state.streak = (s && s.streak) || 0;
+    renderList();
+    renderProgress();
+  } else if (act === 'del') {
+    await api.scheduleRemove({ key: T.keyOf(it) });
+    state.tasks = state.tasks.filter((x) => x !== it);
+    renderList();
+    renderProgress();
+    toast('已删除');
+  } else if (act === 'edit') {
+    openAdd(it);
+  }
+}
+
+function renderCdStrip() {
+  const strip = $('cdstrip');
+  const cds = L.nextCountdowns(state.countdown, null, 8);
+  let html = cds.map((cd) =>
+    '<span class="cdchip' + (cd.days === 0 ? ' today' : '') + '" title="' + L.esc(cd.date) + '">'
+    + L.esc(cd.text) + '<b>' + (cd.days === 0 ? '今天' : cd.days + '天') + '</b>'
+    + '<span class="cdx" data-date="' + L.esc(cd.date) + '" data-text="' + L.esc(cd.text) + '">✕</span></span>'
+  ).join('');
+  html += '<span class="cdchip add" id="addCdChip">' + I.t('panel.addCountdown') + '</span>';
+  strip.innerHTML = html;
+  Array.prototype.forEach.call(strip.querySelectorAll('.cdx'), (x) => {
+    x.onclick = async () => {
+      await api.countdownRemove({ date: x.getAttribute('data-date'), text: x.getAttribute('data-text') });
+      state.countdown = state.countdown.filter((c) => !(c.date === x.getAttribute('data-date') && c.text === x.getAttribute('data-text')));
+      renderCdStrip();
+      renderCal();
+    };
+  });
+  $('addCdChip').onclick = () => { openAdd(null, 'cd'); };
+}
+
+// ---------------------------------------------------------------- 日历
+function renderCal() {
+  const y = state.calY, m = state.calM;
+  $('calTitle').textContent = y + '年' + (m + 1) + '月';
+  const first = new Date(y, m, 1);
+  let lead = first.getDay() - 1;
+  if (lead < 0) lead = 6;
+  const start = new Date(y, m, 1 - lead);
+  const today = L.todayStr();
+  let html = '';
+  for (let i = 0; i < 42; i++) {
+    const dt = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+    const ds = L.fmtDateObj(dt);
+    const other = dt.getMonth() !== m;
+    const hasItem = itemsOf(ds).length > 0;
+    const hasCd = state.countdown.some((c) => c.date === ds);
+    const hol = L.holiday(ds);
+    const cls = 'calcell' + (other ? ' other' : '') + (ds === today ? ' today' : '') + (ds === state.selectedDate ? ' sel' : '');
+    html += '<div class="' + cls + '" data-date="' + ds + '">'
+      + '<div>' + dt.getDate() + '</div>'
+      + '<div class="dots">' + (hasItem ? '<span class="dot"></span>' : '') + (hasCd ? '<span class="dot cd"></span>' : '') + '</div>'
+      + (hol ? '<div class="hol">' + L.esc(hol) + '</div>' : '')
+      + '</div>';
+  }
+  const grid = $('calGrid');
+  grid.innerHTML = html;
+  Array.prototype.forEach.call(grid.querySelectorAll('.calcell'), (c) => {
+    c.onclick = () => { state.selectedDate = c.getAttribute('data-date'); renderCal(); };
+  });
+
+  const items = itemsOf(state.selectedDate);
+  $('calList').innerHTML = items.length
+    ? items.map((it) => {
+      const done = keyDone(state.selectedDate, T.keyOf(it));
+      return '<div class="row-item' + (done ? ' done' : '') + '"><span class="chk" style="' + (done ? 'background:var(--ok);color:var(--ok-fg);border-color:transparent' : '') + '">✓</span>'
+        + '<span class="time">' + L.esc(it.time) + '</span><span class="txt">' + L.esc(it.text) + '</span>'
+        + (it.repeat ? '<span class="badge">' + L.esc(R.describeRepeat(it.repeat)) + '</span>' : '') + '</div>';
+    }).join('')
+    : '<div class="empty">这天没有日程</div>';
+}
+
+// ---------------------------------------------------------------- 快速添加
+async function previewQuick() {
+  const text = $('quickInput').value.trim();
+  if (!text) { $('quickPrev').innerHTML = ''; state.quickParsed = null; return; }
+  const r = await api.nlParse({ text: text });
+  state.quickParsed = r;
+  if (!r || !r.task) { $('quickPrev').innerHTML = ''; return; }
+  const bits = [];
+  if (r.task.date) bits.push(r.task.date === L.todayStr() ? '今天' : (r.task.date === L.dateAdd(L.todayStr(), 1) ? '明天' : r.task.date));
+  if (r.task.time) bits.push('<b>' + r.task.time + '</b>');
+  else bits.push('<b>需要时间</b>');
+  if (r.task.repeat) bits.push(L.esc(R.describeRepeat(r.task.repeat)));
+  if (r.task.alarm) bits.push('提前' + r.task.alarm + '分');
+  if (r.task.tag) bits.push('#' + L.esc(r.task.tag));
+  if (r.task.prio === 'high') bits.push('重要');
+  bits.push('内容：' + L.esc(r.task.text || text));
+  $('quickPrev').innerHTML = '解析为 → ' + bits.join(' · ');
+}
+
+async function quickAdd() {
+  const text = $('quickInput').value.trim();
+  if (!text) return;
+  const r = state.quickParsed || await api.nlParse({ text: text });
+  const task = (r && r.task) || null;
+  if (!task || !task.time) {
+    toast(I.t('panel.needTime'));
+    openAdd(null, 'item');
+    $('addText').value = task ? task.text : text;
+    $('addNl').value = text;
+    return;
+  }
+  await api.scheduleAdd(task);
+  $('quickInput').value = '';
+  $('quickPrev').innerHTML = '';
+  state.quickParsed = null;
+  await reload();
+  toast('已添加：' + task.time + ' ' + task.text);
+}
+
+// ---------------------------------------------------------------- 添加表单
+let editingTask = null;
+let addMode = 'item';
+
+function showView(v) {
+  state.view = v;
+  ['list', 'cal', 'add', 'stats'].forEach((k) => {
+    $('v-' + k).className = 'view' + (v === k ? ' on' : '');
+  });
+  if (v === 'cal') renderCal();
+  if (v === 'stats') renderStats();
+}
+
+function openAdd(task, mode) {
+  addMode = mode || 'item';
+  editingTask = task || null;
+  if (addMode === 'cd') {
+    $('addTitle').textContent = '添加倒数日';
+    $('addText').placeholder = '倒数日名称，如：春节';
+    $('addText').value = '';
+    $('addNl').value = '';
+    $('addDate').value = state.selectedDate;
+    $('addTime').value = '00:00';
+    $('addRepeat').value = 'yearly';
+  } else {
+    $('addTitle').textContent = task ? '编辑日程' : '添加日程';
+    $('addText').placeholder = '要做什么？';
+    const d = new Date();
+    let h = d.getHours(), m = d.getMinutes() + 5;
+    if (m >= 60) { m -= 60; h = (h + 1) % 24; }
+    m = Math.floor(m / 5) * 5;
+    $('addText').value = task ? task.text : '';
+    $('addNl').value = '';
+    $('addDate').value = task && task.date ? task.date : L.todayStr();
+    $('addTime').value = task ? task.time : (L.pad2(h) + ':' + L.pad2(m));
+    $('addRepeat').value = task && task.repeat ? R.serializeRepeat(task.repeat) : '';
+    if ($('addRepeat').value !== (task && task.repeat ? R.serializeRepeat(task.repeat) : '')) {
+      $('addRepeat').value = '__custom';
+      $('addRepeatCustom').style.display = '';
+      $('addRepeatCustom').value = R.serializeRepeat(task.repeat);
+    }
+    $('addAlarm').value = task && task.alarm !== undefined ? String(task.alarm) : '';
+    $('addPrio').value = (task && task.prio) || 'mid';
+    $('addTag').value = (task && task.tag) || '';
+  }
+  showView('add');
+  setTimeout(() => $('addText').focus(), 80);
+}
+
+async function applyNlToForm() {
+  const text = $('addNl').value.trim();
+  if (!text) return;
+  const r = await api.nlParse({ text: text });
+  if (!r || !r.task) return;
+  const t = r.task;
+  if (t.date) $('addDate').value = t.date;
+  if (t.time) $('addTime').value = t.time;
+  if (t.repeat) {
+    const spec = R.serializeRepeat(t.repeat);
+    $('addRepeat').value = spec;
+    if ($('addRepeat').value !== spec) {
+      $('addRepeat').value = '__custom';
+      $('addRepeatCustom').style.display = '';
+      $('addRepeatCustom').value = spec;
+    }
+  }
+  if (t.alarm) $('addAlarm').value = String(t.alarm);
+  if (t.prio) $('addPrio').value = t.prio;
+  if (t.tag) $('addTag').value = t.tag;
+  if (!$('addText').value.trim()) $('addText').value = t.text || text;
+  toast('已按「' + text + '」填好，确认后保存');
+}
+
+async function saveAdd() {
+  const text = $('addText').value.trim();
+  if (!text) { $('addText').classList.add('err'); setTimeout(() => $('addText').classList.remove('err'), 900); return; }
+  if (addMode === 'cd') {
+    await api.countdownAdd({ date: $('addDate').value, text: text });
+    state.countdown = L.parseCountdown((await api.appInit()).countdown || '');
+    renderCdStrip();
+    showView('list');
+    toast('倒数日已添加');
+    return;
+  }
+  let spec = $('addRepeat').value;
+  if (spec === '__custom') spec = $('addRepeatCustom').value.trim();
+  const task = {
+    text: text,
+    time: $('addTime').value || '',
+    date: $('addDate').value || '',
+    repeat: spec || undefined,
+    prio: $('addPrio').value,
+    tag: $('addTag').value.trim() || undefined
+  };
+  const alarm = $('addAlarm').value;
+  if (alarm !== '') task.alarm = parseInt(alarm, 10);
+  if (!task.repeat && !task.date) task.date = '';
+  if (task.repeat && !task.date) task.date = L.todayStr();
+  if (editingTask) {
+    await api.scheduleUpdate({ old: editingTask, patch: task });
+  } else {
+    await api.scheduleAdd(task);
+  }
+  editingTask = null;
+  await reload();
+  showView('list');
+  toast('已保存');
+}
+
+// ---------------------------------------------------------------- 统计
+async function renderStats() {
+  const d = await api.statsGet({ days: 30 });
+  if (!d || d.error) return;
+  const t = d.today, rg = d.range;
+  $('statGrid').innerHTML = [
+    ['今日完成', t.tasksDone + '/' + t.tasksTotal],
+    ['完成率（30天）', rg.summary.rate + '%'],
+    ['当前连签', rg.streak + ' 天'],
+    ['最长连签', rg.longest + ' 天'],
+    ['番茄总数', rg.focusCount],
+    ['专注分钟', rg.focusMinutes]
+  ].map((x) => '<div class="stat"><div class="v">' + x[1] + '</div><div class="k">' + x[0] + '</div></div>').join('');
+
+  $('heat').innerHTML = rg.heatmap.slice(-21).map((h) =>
+    '<i class="l' + h.level + '" title="' + h.date + ' ' + h.done + '/' + h.total + '"></i>').join('');
+
+  $('tagList').innerHTML = rg.tags.length
+    ? rg.tags.slice(0, 8).map((x) => '<div class="tagline"><span>#' + L.esc(x.tag) + '</span>'
+      + '<span class="tagbar"><i style="width:' + x.pct + '%"></i></span>'
+      + '<span class="n">' + x.done + '/' + x.total + '</span></div>').join('')
+    : '<div class="small muted">还没有带标签的日程</div>';
+
+  const u = d.usage || [];
+  const total = u.reduce((a, x) => a + x.usd, 0);
+  const calls = u.reduce((a, x) => a + x.calls, 0);
+  $('usageBox').innerHTML = calls
+    ? '共 ' + calls + ' 次调用 · 约 $' + total.toFixed(4) + '<br>' + u.slice(-7).map((x) => x.day + '：' + x.calls + ' 次 / $' + x.usd.toFixed(4)).join('<br>')
+    : I.t('panel.noKey');
+}
+
+// ---------------------------------------------------------------- 时钟
 function tick() {
   const d = new Date();
   $('clock').textContent = L.pad2(d.getHours()) + ':' + L.pad2(d.getMinutes()) + ':' + L.pad2(d.getSeconds());
   $('date').textContent = d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日 · ' + L.weekdayCn(d);
 }
 
-function setSchedule(text) {
-  state.allItems = L.parseSchedule(text || '');
-  if (state.view === 'list') { renderList(); }
+async function reload() {
+  const d = await api.appInit();
+  state.tasks = T.parseTasks(d.tasks || '');
+  state.countdown = L.parseCountdown(d.countdown || '');
+  state.done = (d.state && d.state.done) || {};
+  state.completedDays = (d.state && d.state.completedDays) || [];
+  state.settings = (d.state && d.state.settings) || { sound: true };
+  state.streak = 0;
+  renderList();
   renderProgress();
-  if (state.view === 'cal') { renderCal(); }
-}
-
-function setCountdown(text) {
-  state.countdown = L.parseCountdown(text || '');
   renderCdStrip();
-  if (state.view === 'cal') { renderCal(); }
+  renderSound();
+  if (state.view === 'cal') renderCal();
 }
 
-window.addEventListener('error', (e) => console.error('ERR: ' + e.message + ' @ ' + e.filename + ':' + e.lineno));
-window.addEventListener('unhandledrejection', (e) => console.error('REJ: ' + (e.reason && e.reason.message ? e.reason.message : e.reason)));
+// ---------------------------------------------------------------- 事件
+window.addEventListener('error', (e) => console.error('ERR ' + e.message + ' @' + e.lineno));
+window.addEventListener('unhandledrejection', (e) => console.error('REJ ' + ((e.reason && e.reason.message) || e.reason)));
 
 (async function init() {
-  const data = await window.widget.popupInit();
-  applyState(data.state);
-  setSchedule(data.schedule === null ? '' : data.schedule);
-  setCountdown(data.countdown || '');
-  applyTheme(data.theme);
-
-  buildWheel($('wHour'), 24, true);
-  buildWheel($('wMin'), 60, true);
-  bindWheel($('wHour'), (idx) => { state.selH = idx; updatePreview(); });
-  bindWheel($('wMin'), (idx) => { state.selM = idx; updatePreview(); });
-
+  const d = await api.appInit();
+  if (window.WidgetI18n) { window.WidgetI18n.setLocale(d.locale); window.WidgetI18n.applyDom(); }
+  state.tasks = T.parseTasks(d.tasks || '');
+  state.countdown = L.parseCountdown(d.countdown || '');
+  state.done = d.state.done || {};
+  state.completedDays = d.state.completedDays || [];
+  state.settings = d.state.settings || { sound: true };
+  applyTheme(d.theme);
   const now = new Date();
   state.calY = now.getFullYear();
   state.calM = now.getMonth();
 
   tick();
   setInterval(tick, 1000);
+  renderList();
+  renderProgress();
+  renderCdStrip();
+  renderSound();
 
-  $('addbtn').onclick = () => openAdd('item');
-  $('cancelbtn').onclick = () => { state.pickMode = null; showView('list'); };
-  $('okbtn').onclick = confirmAdd;
-  $('openCalBtn').onclick = () => { state.calY = L.dateObj(state.selectedDate).getFullYear(); state.calM = L.dateObj(state.selectedDate).getMonth(); renderCal(); showView('cal'); };
-  $('backListBtn').onclick = () => { state.pickMode = null; showView('list'); };
+  api.statsGet({ days: 30 }).then((s) => { if (s && s.today) { state.streak = s.today.streak; renderProgress(); } });
+
+  $('list').onclick = onListClick;
+  $('quickAdd').onclick = quickAdd;
+  $('quickInput').addEventListener('input', () => { clearTimeout(state._qt); state._qt = setTimeout(previewQuick, 260); });
+  $('quickInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') quickAdd(); });
+  $('okAdd').onclick = saveAdd;
+  $('cancelAdd').onclick = () => { editingTask = null; showView('list'); };
+  $('addNl').addEventListener('change', applyNlToForm);
+  $('addRepeat').addEventListener('change', () => {
+    $('addRepeatCustom').style.display = $('addRepeat').value === '__custom' ? '' : 'none';
+  });
+  $('openCalBtn').onclick = () => {
+    const d2 = L.dateObj(state.selectedDate);
+    state.calY = d2.getFullYear();
+    state.calM = d2.getMonth();
+    showView('cal');
+  };
+  $('addItemBtn').onclick = () => openAdd(null, 'item');
+  $('backListBtn').onclick = () => showView('list');
+  $('backFromStats').onclick = () => showView('list');
   $('prevMonth').onclick = () => { state.calM--; if (state.calM < 0) { state.calM = 11; state.calY--; } renderCal(); };
   $('nextMonth').onclick = () => { state.calM++; if (state.calM > 11) { state.calM = 0; state.calY++; } renderCal(); };
-  $('datechip').onclick = () => { state.pickMode = state.addMode; renderCal(); showView('cal'); };
-  $('repToday').onclick = () => { state.repeatDaily = false; updateRepeatRow(); };
-  $('repDaily').onclick = () => { state.repeatDaily = true; updateRepeatRow(); };
-
+  $('statsbtn').onclick = () => showView('stats');
+  $('settingsbtn').onclick = () => api.openSettings();
   $('themebtn').onclick = () => {
     state.theme = (state.theme + 1) % THEMES.length;
     applyTheme(state.theme);
-    window.widget.saveTheme(state.theme);
+    api.saveTheme(state.theme);
+    api.refreshPanelBackdrop();
   };
   $('soundbtn').onclick = async () => {
     state.settings.sound = !state.settings.sound;
     renderSound();
-    await window.widget.saveSettings({ sound: state.settings.sound });
+    await api.saveSettings({ sound: state.settings.sound });
   };
-  $('close').onclick = () => window.widget.close();
-  $('avatar').onclick = () => window.widget.resetPopupPos();
+  $('close').onclick = () => api.hidePopup();
+  $('avatar').onclick = () => api.resetPanelPos();
 
-  $('txtin').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { confirmAdd(); }
-    if (e.key === 'Escape') { state.pickMode = null; showView('list'); }
-  });
   window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && state.view === 'list') { window.widget.hidePopup(); }
+    if (e.key === 'Escape') {
+      if (state.view === 'list') api.hidePopup();
+      else showView('list');
+    }
   });
 
-  window.widget.onScheduleChanged((text) => setSchedule(text));
-  window.widget.onCountdownChanged((text) => setCountdown(text));
-  window.widget.onStateChanged((s) => { applyState(s); renderList(); renderProgress(); });
-  window.widget.onThemeChanged((t) => applyTheme(t));
-  window.widget.onPopupBackdrop((url) => { $('backdrop').src = url; });
-
-  renderCdStrip();
-  renderList();
-  renderProgress();
+  api.onTasksChanged((text) => { state.tasks = T.parseTasks(text || ''); renderList(); renderProgress(); if (state.view === 'cal') renderCal(); });
+  api.onThemeChanged((t) => { applyTheme(t); api.refreshPanelBackdrop(); });
+  api.onCountdownChanged((text) => { state.countdown = L.parseCountdown(text || ''); renderCdStrip(); if (state.view === 'cal') renderCal(); });
+  api.onStateChanged((s) => { state.done = (s && s.done) || state.done; state.completedDays = (s && s.completedDays) || state.completedDays; state.streak = (s && s.streak) || state.streak; renderList(); renderProgress(); });
+  api.onPanelBackdrop((url) => { $('backdrop').src = url; });
+  api.onFocusChanged(() => { /* 面板不展示专注 */ });
 
   if (location.search.indexOf('debug=1') !== -1) {
     setInterval(() => {
-      const rect = (id) => {
-        const el = $(id);
-        if (!el) { return null; }
-        const b = el.getBoundingClientRect();
-        return { x: b.left + b.width / 2, y: b.top + b.height / 2, left: b.left, top: b.top, w: b.width, h: b.height };
-      };
-      const hw = $('wHour').getBoundingClientRect();
-      window.widget.debugDump({
-        view: state.view,
-        selectedDate: state.selectedDate,
-        selH: state.selH,
-        selM: state.selM,
-        streak: state.streak,
-        wheelH: { centerX: hw.left + hw.width / 2, centerY: hw.top + 60 },
-        rects: {
-          addbtn: rect('addbtn'), okbtn: rect('okbtn'), cancelbtn: rect('cancelbtn'),
-          txtin: rect('txtin'), datechip: rect('datechip'),
-          openCalBtn: rect('openCalBtn'), backListBtn: rect('backListBtn'),
-          prevMonth: rect('prevMonth'), nextMonth: rect('nextMonth'),
-          themebtn: rect('themebtn'), close: rect('close'), avatar: rect('avatar'),
-          soundbtn: rect('soundbtn'), list: rect('list'), calGrid: rect('calGrid'),
-          addCdChip: rect('addCdChip'), chk0: rect('chk_0')
-        }
-      });
-    }, 800);
+      api.debugDump({ view: state.view, date: state.selectedDate, streak: state.streak, tasks: state.tasks.length });
+    }, 1500);
   }
 })();

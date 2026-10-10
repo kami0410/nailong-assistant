@@ -2,140 +2,126 @@
 <html>
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: file:; media-src 'self' file:; font-src 'self'; connect-src 'none'; form-action 'none'">
 <title>奶蛙工具</title>
+<link rel="stylesheet" href="ui.css">
 <style>
-  html, body {
-    margin: 0; padding: 0; width: 100%; height: 100%;
-    overflow: hidden; background: transparent; cursor: default;
-    font-family: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
-    color: #fff6e0; -webkit-user-select: none; user-select: none;
-  }
-  #card {
-    position: absolute; left: 8px; top: 8px; right: 8px; bottom: 8px;
-    border-radius: 24px; overflow: hidden; display: flex; flex-direction: column;
-    background: rgba(96, 68, 20, 0.60);
-    box-shadow: 0 16px 40px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,242,205,0.30);
-    border: 1px solid rgba(255,238,195,0.26);
-  }
-  #tint { position: absolute; left: 0; top: 0; right: 0; bottom: 0;
-    background: linear-gradient(180deg, rgba(196,148,38,0.30), rgba(112,78,16,0.48)); pointer-events: none; }
-  #content { position: relative; padding: 10px 12px; display: flex; flex-direction: column; height: 100%; box-sizing: border-box; }
-
-  #topbar { display: flex; align-items: center; height: 28px; -webkit-app-region: drag; flex: none; }
-  #topbar .label { flex: 1; font-size: 11px; letter-spacing: 2px; color: rgba(255,225,165,0.8); }
-  .icobtn { width: 22px; height: 22px; line-height: 22px; text-align: center; font-size: 12px;
-    color: rgba(255,240,205,0.65); border-radius: 50%; cursor: pointer; -webkit-app-region: no-drag; }
-  .icobtn:hover { color: #fff6e0; background: rgba(255,235,180,0.14); }
-
-  #tabs { display: flex; gap: 6px; margin: 6px 0 8px; flex: none; }
-  .tab { flex: 1; height: 30px; line-height: 30px; text-align: center; border-radius: 15px; cursor: pointer;
-    font-size: 12px; color: rgba(255,240,205,0.75); background: rgba(255,235,180,0.12);
-    border: 1px solid rgba(255,235,180,0.20); }
-  .tab:hover { background: rgba(255,235,180,0.20); }
-  .tab.on { background: rgba(246,199,88,0.92); color: #4a3a12; font-weight: 600; border-color: transparent; }
-
-  .view { flex: 1; display: none; flex-direction: column; min-height: 0; }
-  .view.on { display: flex; }
-
-  #disp { text-align: center; font-size: 40px; font-weight: 600; letter-spacing: 2px;
-    color: #fff6e0; text-shadow: 0 2px 10px rgba(0,0,0,0.35); line-height: 1.1; }
-  #dispAlarm { text-align: center; font-size: 36px; font-weight: 600; letter-spacing: 2px;
-    color: #fff6e0; text-shadow: 0 2px 10px rgba(0,0,0,0.35); line-height: 1.1; }
-  #dispCoin { text-align: center; font-size: 34px; font-weight: 600; letter-spacing: 1px;
-    color: #fff6e0; text-shadow: 0 2px 10px rgba(0,0,0,0.35); line-height: 1.18;
-    word-break: break-word; overflow-wrap: anywhere; min-height: 44px; max-height: 112px;
-    overflow: hidden; display: flex; align-items: center; justify-content: center; }
-
-  .chips { display: flex; gap: 6px; margin: 10px 0 8px; }
-  .chip { flex: 1; height: 28px; line-height: 28px; text-align: center; border-radius: 14px; cursor: pointer;
-    font-size: 11.5px; color: rgba(255,240,205,0.85); background: rgba(255,235,180,0.13);
-    border: 1px solid rgba(255,235,180,0.22); }
-  .chip:hover { background: rgba(255,235,180,0.24); }
-  .chip.on { background: rgba(246,199,88,0.92); color: #4a3a12; font-weight: 600; border-color: transparent; }
-
-  .row { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
-  input, select {
-    height: 32px; border: none; border-radius: 12px; outline: none; box-sizing: border-box;
-    background: rgba(255,225,160,0.14); color: #fff6e0; font-size: 12.5px; padding: 0 10px;
-    box-shadow: inset 0 1px 0 rgba(255,238,190,0.18);
-  }
-  .row input { flex: 1 1 0; min-width: 0; }
-  input::placeholder { color: rgba(255,240,205,0.35); }
-  input.num { flex: 0 0 66px; width: 66px; text-align: center; }
-  select { flex: 1 1 0; min-width: 0; cursor: pointer; }
-  option { background: #5a431a; color: #fff6e0; }
-  .btn { flex: 1; height: 34px; line-height: 34px; text-align: center; border-radius: 17px; cursor: pointer;
-    font-size: 13px; font-weight: 600; }
-  .btn.go { background: rgba(246,199,88,0.92); color: #4a3a12; }
-  .btn.go:hover { background: rgba(252,212,110,1); }
-  .btn.cancel { background: rgba(255,235,180,0.14); color: rgba(255,240,205,0.85); }
-  .btn.cancel:hover { background: rgba(255,235,180,0.24); }
-
-  #status { flex: none; margin-top: 8px; min-height: 16px; font-size: 11px; color: rgba(255,240,205,0.7); text-align: center;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .note { margin-top: 6px; font-size: 10.5px; line-height: 1.5; color: rgba(255,240,205,0.5); text-align: center; }
+  #tabs { margin: 8px 0 10px; }
+  .disp { text-align: center; font-size: 38px; font-weight: 600; letter-spacing: 2px; font-family: var(--mono); line-height: 1.1; }
+  .sub { text-align: center; font-size: 11px; color: var(--fg-dim); margin-top: 2px; min-height: 15px; }
+  .chips { display: flex; gap: 5px; margin: 10px 0 8px; }
+  .chips .chip { flex: 1; text-align: center; }
+  .ring { position: relative; width: 150px; height: 150px; margin: 2px auto 6px; }
+  .ring svg { transform: rotate(-90deg); }
+  .ring .bgc { stroke: var(--chip); }
+  .ring .fgc { stroke: var(--accent); transition: stroke-dashoffset 0.6s linear; }
+  .ring .center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .ring .center .t { font-size: 30px; font-weight: 600; font-family: var(--mono); }
+  .ring .center .p { font-size: 11px; color: var(--fg-dim); }
+  .note { margin-top: 8px; font-size: 10.5px; line-height: 1.5; color: var(--fg-dim); text-align: center; }
+  #status { flex: none; margin-top: 8px; min-height: 16px; font-size: 11px; color: var(--fg-mid); text-align: center;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #dispCoin { text-align: center; font-size: 30px; font-weight: 600; line-height: 1.2; min-height: 62px;
+    display: flex; align-items: center; justify-content: center; word-break: break-word; }
 </style>
 </head>
-<body>
-  <div id="card">
-    <div id="tint"></div>
-    <div id="content">
-      <div id="topbar">
-        <div class="label">奶 蛙 工 具</div>
-        <div class="icobtn" id="close" title="收起（右键奶蛙可再次唤出）">✕</div>
+<body class="t0">
+  <div class="card">
+    <div class="tint"></div>
+    <div class="content">
+      <div class="topbar">
+        <div class="label" data-i18n="tool.title">奶 蛙 工 具</div>
+        <div class="icobtn" id="settingsbtn" title="设置">⚙</div>
+        <div class="icobtn" id="close" title="收起">✕</div>
       </div>
 
-      <div id="tabs">
-        <div class="tab" data-tab="countdown">⏳ 倒计时</div>
-        <div class="tab" data-tab="alarm">⏰ 闹钟</div>
-        <div class="tab" data-tab="coin">🪙 抛硬币</div>
+      <div class="tabs" id="tabs">
+        <div class="tab on" data-tab="focus">🍅 <span data-i18n="tool.tab.focus">专注</span></div>
+        <div class="tab" data-tab="countdown">⏳ <span data-i18n="tool.tab.countdown">倒计时</span></div>
+        <div class="tab" data-tab="alarm">⏰ <span data-i18n="tool.tab.alarm">闹钟</span></div>
+        <div class="tab" data-tab="coin">🪙 <span data-i18n="tool.tab.coin">硬币</span></div>
       </div>
 
-      <div class="view" id="v-countdown">
-        <div id="disp">00:00</div>
+      <!-- 番茄钟 -->
+      <div class="view on" id="v-focus">
+        <div class="ring">
+          <svg width="150" height="150">
+            <circle class="bgc" cx="75" cy="75" r="66" fill="none" stroke-width="8"></circle>
+            <circle class="fgc" id="ringFg" cx="75" cy="75" r="66" fill="none" stroke-width="8"
+              stroke-linecap="round" stroke-dasharray="414.7" stroke-dashoffset="414.7"></circle>
+          </svg>
+          <div class="center">
+            <div class="t" id="pomoTime">25:00</div>
+            <div class="p" id="pomoPhase" data-i18n="tool.idle">待开始</div>
+          </div>
+        </div>
         <div class="chips">
-          <div class="chip" data-min="1">1分</div>
-          <div class="chip" data-min="3">3分</div>
-          <div class="chip" data-min="5">5分</div>
-          <div class="chip" data-min="10">10分</div>
-          <div class="chip" data-min="25">25分</div>
+          <div class="chip" data-min="15">15分</div>
+          <div class="chip on" data-min="25">25分</div>
+          <div class="chip" data-min="45">45分</div>
+          <div class="chip" data-min="50">50分</div>
         </div>
         <div class="row">
-          <input class="num" id="cdMin" type="number" min="1" max="600" placeholder="分钟">
-          <div class="btn go" id="cdGo">开始</div>
-          <div class="btn cancel" id="cdCancel">取消</div>
+          <div class="btn primary grow" id="pomoStart" data-i18n="tool.start">开始专注</div>
+          <div class="btn sm" id="pomoPause" data-i18n="tool.pause">暂停</div>
+          <div class="btn sm" id="pomoSkip" data-i18n="tool.skip">跳过</div>
+          <div class="btn sm" id="pomoStop" data-i18n="tool.stop">停止</div>
         </div>
-        <div class="note">到点时奶蛙会跳起来报时</div>
+        <div class="sub" id="pomoStat"></div>
+        <div class="note" data-i18n="tool.focusNote">专注结束奶蛙会叫你休息；到点自动进入短休/长休</div>
       </div>
 
-      <div class="view" id="v-alarm">
-        <div id="dispAlarm">--:--</div>
+      <!-- 倒计时 -->
+      <div class="view" id="v-countdown">
+        <div class="disp" id="disp">00:00</div>
+        <div class="sub" id="cdSub"></div>
+        <div class="chips">
+          <div class="chip" data-cd="1">1分</div>
+          <div class="chip" data-cd="3">3分</div>
+          <div class="chip" data-cd="5">5分</div>
+          <div class="chip on" data-cd="10">10分</div>
+          <div class="chip" data-cd="25">25分</div>
+        </div>
         <div class="row">
+          <input class="grow" id="cdMin" type="number" min="1" max="600" data-i18n-ph="tool.minutes" placeholder="分钟">
+          <div class="btn primary" id="cdGo" data-i18n="tool.cdStart">开始</div>
+          <div class="btn" id="cdCancel" data-i18n="tool.cdCancel">取消</div>
+        </div>
+        <div class="note" data-i18n="tool.cdNote">到点时奶蛙会跳起来报时</div>
+      </div>
+
+      <!-- 闹钟 -->
+      <div class="view" id="v-alarm">
+        <div class="disp" id="dispAlarm">--:--</div>
+        <div class="sub" id="alSub"></div>
+        <div class="row" style="margin-top:12px">
           <select id="alH"></select>
           <select id="alM"></select>
         </div>
         <div class="row">
-          <div class="btn go" id="alGo">设定闹钟</div>
-          <div class="btn cancel" id="alCancel">取消</div>
+          <div class="btn primary" id="alGo" data-i18n="tool.alarmSet">设定闹钟</div>
+          <div class="btn" id="alCancel" data-i18n="tool.cdCancel">取消</div>
         </div>
-        <div class="note">到点时奶蛙会响铃并跳起来</div>
+        <div class="note" data-i18n="tool.alarmNote">到点时奶蛙会响铃并跳起来，点它会停</div>
       </div>
 
+      <!-- 硬币 -->
       <div class="view" id="v-coin">
-        <div id="dispCoin">抛一枚硬币？</div>
+        <div id="dispCoin" data-i18n="tool.coinAsk">抛一枚硬币？</div>
         <div class="row">
-          <input id="coinA" placeholder="选项 A（可留空）">
-          <input id="coinB" placeholder="选项 B（可留空）">
+          <input id="coinA" data-i18n-ph="tool.coinA" placeholder="选项 A（可留空）">
+          <input id="coinB" data-i18n-ph="tool.coinB" placeholder="选项 B（可留空）">
         </div>
         <div class="row">
-          <div class="btn go" id="coinGo">🪙 抛硬币</div>
+          <div class="btn primary" id="coinGo">🪙 <span data-i18n="tool.coinGo">抛硬币</span></div>
         </div>
-        <div class="note">留空则抛正 / 反；也可以直接点奶蛙来抛</div>
+        <div class="note" data-i18n="tool.coinNote">留空则抛正/反；也可以直接点奶蛙来抛</div>
       </div>
 
       <div id="status"></div>
     </div>
   </div>
+  <script src="i18n.js"></script>
   <script src="tool.js"></script>
 </body>
 </html>

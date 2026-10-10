@@ -1,9 +1,9 @@
 {
   "name": "nailong-assistant",
   "productName": "奶蛙助手",
-  "version": "2.0.0",
+  "version": "3.2.0",
   "private": true,
-  "description": "一只住在 Windows 桌面上的奶蛙：日程提醒 + 液态玻璃日程面板 + AI 电脑助手(computer use) + 抓奶蛙/倒计时/闹钟/抛硬币 + 拖文件回收",
+  "description": "一只住在 Windows 桌面上的奶蛙：pi 内核驱动的 AI 电脑助手（会看屏幕、会用鼠标键盘、会读无障碍元素树）+ 日程提醒 + 番茄专注 + 数据统计 + 剪贴板历史 + 桌宠小游戏",
   "main": "main.js",
   "author": "wangyiding645",
   "license": "MIT",
@@ -19,39 +19,100 @@
     "desktop-pet",
     "electron",
     "windows",
-    "schedule",
-    "reminder",
     "computer-use",
     "ai-assistant",
+    "ui-automation",
+    "schedule",
+    "reminder",
+    "pomodoro",
     "liquid-glass",
-    "tamagotchi"
+    "tamagotchi",
+    "llm-agent"
   ],
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "start": "electron .",
-    "dist": "npx --yes electron-builder --win portable"
+    "test": "node --test \"test/**/*.test.js\"",
+    "test:watch": "node --test --watch \"test/**/*.test.js\"",
+    "lint:syntax": "node scripts/check-syntax.js",
+    "check": "npm run lint:syntax && npm test",
+    "audit": "node scripts/run-audit.js",
+    "smoke:pi": "node scripts/smoke-pi.js",
+    "dist": "node scripts/build-win.js",
+    "dist:portable": "node scripts/build-win.js --portable",
+    "dist:installer": "node scripts/build-win.js --nsis"
   },
   "devDependencies": {
-    "electron": "^44.5.1"
+    "electron": "^44.5.1",
+    "electron-builder": "^26.15.3"
   },
   "build": {
     "appId": "com.nailong.assistant",
     "productName": "奶蛙助手",
+    "artifactName": "nailong-assistant-${version}-${os}-${arch}.${ext}",
     "files": [
       "main.js",
       "preload.js",
+      "src/**",
       "renderer/**",
+      "pi-ext/**",
       "native/**",
       "assets/**",
-      "package.json"
+      "package.json",
+      "!**/*.test.js",
+      "!**/scripts/**",
+      "!dist/**"
     ],
+    "extraMetadata": {
+      "main": "main.js"
+    },
     "win": {
       "icon": "assets/icon.ico",
       "target": [
-        "portable"
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
       ]
     },
+    "nsis": {
+      "oneClick": false,
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
+      "installerHeaderIcon": "assets/icon.ico",
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "奶蛙助手",
+      "deleteAppDataOnUninstall": false
+    },
     "portable": {
-      "artifactName": "nailong-assistant-${version}-win-x64.exe"
+      "artifactName": "nailong-assistant-${version}-win-x64-portable.exe"
+    },
+    "asar": false,
+    "compression": "normal",
+    "directories": {
+      "output": "dist",
+      "buildResources": "assets"
     }
+  },
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "^1.1.0",
+    "typebox": "^1.3.27"
+  },
+  "config": {
+    "electron_mirror": "https://npmmirror.com/mirrors/electron/",
+    "electron_builder_binaries_mirror": "https://npmmirror.com/mirrors/electron-builder-binaries/"
   }
 }

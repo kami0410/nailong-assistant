@@ -4,265 +4,248 @@
 
 # 奶蛙助手 · Nailong Assistant
 
-**一只住在你桌面上的奶蛙，会看屏幕、会用鼠标键盘 —— 它是你的 AI 电脑助手，顺便还是个桌宠。**
+**一只住在你桌面上的奶蛙。它有 pi 的大脑，你的电脑是它的手。**
 
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11-0078D4?logo=windows&logoColor=white)](#)
 [![Electron](https://img.shields.io/badge/Electron-44-47848F?logo=electron&logoColor=white)](#)
+[![pi](https://img.shields.io/badge/内核-pi%201.1-6E56CF)](#-双内核pi-当大脑)
 [![License](https://img.shields.io/badge/License-MIT-3DA639)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/wangyiding645/nailong-assistant?color=orange)](../../releases)
-[![Stars](https://img.shields.io/github/stars/wangyiding645/nailong-assistant?style=social)](https://github.com/wangyiding645/nailong-assistant/stargazers)
+[![Version](https://img.shields.io/badge/version-3.2.0-orange)](CHANGELOG.md)
 
-[简体中文](README.md) · [English](README_EN.md)
+[简体中文](README.md) · [English](README_EN.md) · [架构](docs/ARCHITECTURE.md) · [安全](docs/SECURITY.md) · [更新日志](CHANGELOG.md)
 
 </div>
 
 ---
 
-## 🤖 核心：奶蛙助手（AI Computer Use）
+## 🤖 双内核：pi 当大脑
 
-> 市面上大多数"AI 助手"只能陪你聊天。**奶蛙助手能真的动你的电脑。**
+奶蛙有 **54 个工具**，但"怎么想"这件事不必自己造：
 
-它把你的桌面截图发给多模态大模型，模型想好下一步，再由奶蛙**真实地**移动鼠标、点击、打字、按快捷键、滚动页面、启动程序 —— 每一步都执行、截图、判断、继续，直到把事情做完。
-
-**说人话就是**：你说"帮我把微信里没读的消息数报给我"，它会自己打开微信、找红点、数给你听。
-
-### 它能做哪些操作
-
-| 工具 | 说明 |
-| --- | --- |
-| 📷 `screenshot` | 截取当前屏幕并"看懂"（坐标以截图像素为准） |
-| 🖱 `click` / `dblclick` / `rightclick` | 在屏幕任意坐标单击 / 双击 / 右键 |
-| ⌨️ `type` | 向当前焦点输入任意文字（中文也 OK，走剪贴板粘贴） |
-| ⚡ `key` | 按键与组合键：`enter`、`esc`、`ctrl+s`、`win+r`、`alt+tab`、`f5`… |
-| 🖲 `scroll` | 滚轮上/下滚动 |
-| ⏳ `wait` | 等待界面加载（毫秒） |
-| 🚀 `launch` | 启动应用或打开网址：`notepad`、`explorer`、`https://…` |
-
-### 三步用起来
-
-1. **唤出**：右键奶蛙 → **🤖 奶蛙助手**（奶蛙会立刻换上"西装敲笔记本"的工作形象 🤵）
-2. **填接口**：点右上角 **⚙**，**只填 Base URL 和 API Key 就能用** → **保存并测试连接**
-3. **开口使唤**：在输入框写下你的需求 → 发送
-
-> ✅ **最简配置就两项**：`Base URL` + `API Key`。
-> 模型名**留空会自动检测** —— 奶蛙会去 `/models` 里挑一个支持图片输入的模型并自动填好（也可手动指定）。
-
-> 💡 每次做完一个动作，模型都会**自动收到一张新截图**确认结果，不需要你手动截屏。
-> 想额外附一张"当前屏幕"给它，点一下 **📷 附带截图** 开关即可。
-
-### 接口配置（任意 OpenAI 兼容服务）
-
-| 字段 | 必填 | 说明 | 例子 |
-| --- | --- | --- | --- |
-| **Base URL** | ✅ | OpenAI 格式的接口根地址 | `https://api.openai.com/v1` · `https://api.deepseek.com/v1` · `https://dashscope.aliyuncs.com/compatible-mode/v1` · `http://localhost:11434/v1`(Ollama) |
-| **API Key** | ✅ | 服务商的 Key | `sk-…`（保存后本机加密，界面只显示 `••••••`） |
-| **模型名** | ⬜ 可留空 | **留空 = 自动检测**；手动填则须支持图片输入（多模态） | `gpt-4o-mini`、`qwen-vl-max`、`gemini-2.0-flash`、`deepseek-v4-flash-vision-exp`… |
-
-### 两种执行节奏
-
-| 模式 | 行为 | 适合 |
+| 内核 | 是什么 | 适合 |
 | --- | --- | --- |
-| 🛡 **每步确认**（默认） | AI 想做的每个动作都会先弹出来，你点 **执行 / 跳过 / 本任务自动** 才继续 | 第一次用、敏感操作 |
-| ⚡ **自动执行** | 一口气把任务做完，你只看它表演 | 信任后的重复任务 |
+| **pi 内核**（默认） | 把 [pi](https://pi.dev) 当子进程跑（`pi --mode rpc`）。模型接入、上下文压缩、重试、thinking 档位、技能、会话树、多 provider 全交给它 | 想要最强的规划和长任务能力 |
+| **内置引擎** | 原生的零依赖轻量 agent 循环：多协议流式、工具循环、权限确认 | 极简、不想多一个进程（模型调用仍需接口） |
 
-- **跳过**：让它换个思路（AI 会知道你拒绝了这一步）
-- **本任务自动**：本次任务剩下的步骤不再问，下次任务恢复确认
-- 随时 **停止** 中断，**清空** 开一段新对话
+```
+你说话
+  ↓
+pi 子进程（--no-builtin-tools，只剩一颗脑子）
+  ↓ 决定要动手
+pi-ext/nailong.mjs（把奶蛙的 54 个工具注册成 pi 工具）
+  ↓ 通过 127.0.0.1 的本地桥（随机 token）
+Electron 主进程：截图 / 无障碍元素树 / 鼠标键盘 / 文件 / 系统 / 日程
+  ↓ 每个动作都先问你（可以切自动）
+真的动了你的电脑
+```
 
-### 界面元素速查
+- **换内核不放水**：两个引擎共用同一份权限实现。高危操作在哪个内核下都要确认
+- **崩溃隔离**：pi 挂了桌宠照常蹦跶，界面自动退回内置引擎，不用重启应用
+- **设置里一键切换**：`自动 / 只用 pi / 只用内置`
 
-| 元素 | 作用 |
+### pi 是自带的，不借你机器上那个
+
+奶蛙给 pi 准备了一套**属于自己的配置目录**（`.userdata/pi-agent`），默认**完全不读** `~/.pi`：
+
+| | 自带（默认） | 沿用系统（可选） |
+| --- | --- | --- |
+| 模型凭据 | 来自奶蛙设置（Base URL + Key + 模型） | 来自你在 pi 里的登录（订阅 / Key） |
+| 代理 / 扩展 / 偏好 | 干净，不受影响 | 一并生效 |
+| 身份说明 | 自动注入「你是桌面助手，不是写代码的编程助手」+ 红线 | 用 pi 自己的 |
+
+为什么要自带：机器上 pi 的配置是别的工具留下的，会把奶蛙带坏。实测踩过一次 ——
+`~/.pi/agent/settings.json` 里配了个没开的 `httpProxy`，所有模型请求都变成一句含糊的
+`Connection error.`。现在除了隔离，还有一个**环境自检**会直接告诉你「哪个文件、哪个端口、
+三条修复路径」，而不是让你对着一句英文发呆。
+
+想用你已经在 pi 里登录好的模型？设置 → 模型 → 切成「沿用机器上 pi 的配置」即可。
+
+### 界面上能用到 pi 的哪些能力
+
+这些原本只有 pi 命令行里才有，现在都在助手窗里：
+
+| 入口 | 做什么 |
 | --- | --- |
-| 📌 **图钉** | 钉住窗口：锁定最高层级（能压住全屏应用）+ 被最小化会自动回来。跑长任务时建议开着 |
-| 📷 附带截图 | 发送消息时额外附带一张当前屏幕 |
-| 每步确认 / 自动执行 | 切换上面说的两种节奏 |
-| ⚙ | 修改接口配置 |
-| ✕ | 收起窗口（右键奶蛙可再次唤出；AI 任务不会因此中断） |
+| 🧠 模型 | 列出 pi 能用的全部模型（含你订阅登录的），点一下即切 |
+| 💭 思考 | 推理档位 `off / minimal / low / medium / high / xhigh / max` |
+| ⋯ → 压缩上下文 | 手动 compact，用量区会显示上下文占用百分比 |
+| ⋯ → 复制当前会话 | 开分支；切会话时会真的回放历史（含工具调用、思考、截图） |
+| ⋯ → pi 的命令与技能 | pi 发现的 slash 命令、prompt 模板、skills，点一下填入输入框 |
+| ⋯ → 从某条消息重来 | 挑一条历史消息在那里开分支（fork），原对话保留 |
+| 🗂 历史会话 → 会话结构 | 树状看整个会话，消息节点上点 ⑂ 就能从那里分支 |
+| 运行中插话 | 它干活时发送键变成「插入」（steering），说的话进当前任务；也可选排在后面 |
+| 拖图进对话框 | 把 png/jpg 直接拖进助手窗当附件发给模型（自动按长边缩放） |
+| 🗂 历史会话 | 新建 / 切换 / 重命名 / 删除 |
+| 设置 → 模型 | 配置目录模式（自带 / 沿用系统）、自动压缩、自动重试、默认档位、上下文窗口 |
+| 设置 → 模型 | **计划模式**：动手前先把步骤列出来等你批准 |
+| 设置 → 模型 | **MCP 服务器管理**：粘贴 Claude Desktop / Cursor 的 `mcpServers` 片段，带校验与增删启停 |
+| 设置 → 模型 | **同时加载你自己的 pi 扩展**（MCP 服务器、子代理、code mode、第三方包）——默认关 |
 
-### 用法示例（直接照抄）
+关于最后一项：默认奶蛙只加载**自己**的扩展（`--no-extensions`），你的 MCP、子代理（pi-subagents）、
+council 这类都不会进来，避免第三方代码在奶蛙旁边跑。要用就在设置里显式打开，
+**代价写在界面上**：信任面会从「奶蛙自己的代码」扩到「你装过的所有 pi 包」。
 
-| 场景 | 你说 |
+另外设置 → 关于里还有**导出当前会话**为文本。
+
+界面语言可在「设置 → 外观 → 语言」切换。词典中英各有 218 个 key，HTML 标记了 141 处翻译属性。测试校验已登记 key 的存在及中英集合一致；部分动态提示、设置说明仍为中文，不能据此声称全界面已完整翻译。
+
+### 它到底能干什么
+
+不是"陪聊"，是真的动你的电脑：
+
+| 你说 | 它做 |
 | --- | --- |
-| 看屏幕报信息 | 「看一下屏幕，告诉我现在打开的软件在做什么」 |
-| 打开并登录网站 | 「打开 https://example.com，帮我填上邮箱 xxx@qq.com」 |
-| 整理窗口 | 「把记事本打开，写上'明天 9 点开会'，然后保存到桌面叫 备忘.txt」 |
-| 重复操作 | 「在浏览器里把当前页面的标题复制下来，用记事本记下来」 |
-| 查资料 | 「打开百度，搜'今天的天气'，把结果念给我」 |
-| 让它自己判断 | 「看看我屏幕上有没有报错弹窗，有的话念给我听，然后点掉」 |
+| 「看看我屏幕上有什么」 | 截屏 + 读无障碍元素树，报出前台窗口和里面的控件 |
+| 「把微信里未读消息数报给我」 | 自己找窗口、看界面、数给你听 |
+| 「明天下午3点半跟设计组评审 #工作」 | 解析成日程写进日历，提前 10 分钟提醒你 |
+| 「把桌面上的截图都收进一个文件夹」 | 列目录、建文件夹、移动文件 |
+| 「我最近两周效率怎么样」 | 读自己的打卡和番茄记录，给你统计 |
+| 「记住我的项目文档在 D:\work\docs」 | 写进长期记忆，以后所有对话都知道 |
+| 「25 分钟后叫我」 | 起番茄钟，到点奶蛙跳起来叫你 |
 
-### 安全设计（为什么敢让它动电脑）
+### 工具清单（54 个）
 
-- 🔐 **密钥不出本机**：用 Windows 本机 DPAPI（Electron `safeStorage`）加密保存，不写明文、不联网上传；界面上永远显示为 `••••••`
-- 🕶 **截图时自动隐身**：截屏瞬间把奶蛙的所有窗口设为全透明 —— 既防止 AI"看到自己"算错坐标，也防止它把自己的面板点关掉
-- 🧭 **每步可拦**：默认每步都要你点「执行」，随时可「跳过」或「停止」
-- 🚫 **内置红线**：系统提示词明确禁止删除文件、付款、发送消息、改系统设置等危险操作，遇到会先停下来问你
-- 🗂 **动作全记录**：每一步动作都会以 `▶ 点击 (x,y)` 的形式留在对话里，可回查
+| 组 | 能力 |
+| --- | --- |
+| 🖥 **电脑操作**（19） | `screenshot`（可指定显示器） `view_image`（看本地图片） `ui_tree` `find_element` `click_element` `click` `dblclick` `rightclick` `drag` `type_text` `press_key` `scroll` `move_mouse` `launch` `focus_window` `window_action` `screen_info` `wait` |
+| 📁 **文件**（9） | `read_file` `write_file` `list_dir` `file_info` `mkdir` `copy_path` `move_path` `delete_path`（进回收站） `search_files` |
+| ⚙️ **系统**（11） | `run_command` `clipboard_get/set/history` `system_info` `list_processes` `set_volume` `set_brightness` `lock_screen` `notify_user` `web_fetch` |
+| 📅 **日程**（6） | `schedule_list/add/done/remove` `countdown_list/add` |
+| 🍅 **专注**（4） | `focus_start/status/stop` `stats_overview` |
+| 🧠 **记忆**（2） | `remember` `recall` |
+| 🐸 **助手**（2） | `ask_user` `think` |
 
-### 常见问题
-
-<details>
-<summary><b>连接失败 / 403 / 400？</b></summary>
-
-- 确认 Base URL 填的是**根地址**（程序会自动补 `/chat/completions`）
-- 有些网关要求特定的 `User-Agent` / 会话头，或限制了地区，换官方接口试试
-- 报错信息会原样显示在窗口里，按提示改
-</details>
-
-<details>
-<summary><b>模型名要自己填吗？</b></summary>
-
-不用。**只填 Base URL 和 API Key**，点保存时奶蛙会请求 `<Base URL>/models`，优先挑带 `vision / vl / 4o / gemini / qwen / flash` 等关键词的多模态模型并自动填入。
-如果你的服务商没有 `/models` 接口（少数网关），它会提示你手动填一个。
-</details>
-
-<details>
-<summary><b>AI 说"看不到画面"或点错位置？</b></summary>
-
-- 模型**必须支持图片输入**，纯文本模型（如 `deepseek-chat`）不行
-- 坐标以截图像素为准；程序已做 DPI 缩放换算，但若你改了系统缩放比例，重启一次即可
-</details>
-
-<details>
-<summary><b>为什么截图里看不到奶蛙？</b></summary>
-
-这是故意的 —— 截图时奶蛙会把自己藏起来，这样 AI 不会把奶蛙当成要操作的目标。
-</details>
-
-<details>
-<summary><b>费钱吗？</b></summary>
-
-每次动作会带一张压缩后的截图（1280 宽 JPEG），步骤越多花费越高。
-建议先用「每步确认」摸清一个任务的步数，再决定要不要自动化。费用由你的接口账号承担。
-</details>
+**为什么比"纯截图"的方案准**：`native/uia.ps1` 常驻一个 Windows UI Automation worker，
+把控件以「角色 + 名称 + 精确边界 + 是否可用」的带 id 文本吐出来。模型说
+`click_element("e37")`，而不是猜像素坐标 —— 猜坐标是同类工具翻车最多的地方。
 
 ---
 
-## 🐸 顺便，它还是只好桌宠
+## 🍅 顺便，它是一套完整的时间管理工具
 
-| 功能 | 说明 |
-| --- | --- |
-| 多组动画 | 待机 / 左跑 / 右跑 / 挥手 / 大笑 / 失败 / 等待 / 审阅 / **工作（西装敲键盘，开助手时自动换上）** |
-| 自由拖动 | 按住拖动搬家，按方向切换跑步动画，位置自动记忆 |
-| 悬停互动 | 鼠标放上去：挥手 + 展开今日日程；点击：打开面板 |
-| 常驻置顶 | 浮在所有窗口之上；`Win + D` 显示桌面后自动回来 |
-| 气泡轮播 | 自动轮播今日日程与倒数日 |
+这些不需要任何 API Key，装上就能用。
 
-### 📅 日程与提醒
-- `schedule.txt`：`HH:MM|内容`（每天）或 `YYYY-MM-DD HH:MM|内容`（仅这天）
-- 到点：气泡变红闪烁 + 跳跃 + 提示音；**提前 5 分钟**轻声预告；当天全部完成 → 大笑庆祝
+### 日程与提醒
+- 支持重复规则：`每天 / 工作日 / 每周末 / 每周一三五 / 每月1号 / 每年 / 每2天`
+- **说人话就能加**：「明天下午3点半跟设计组评审 #工作 提前10分钟」→ 自动解析出日期、时间、重复、标签、提醒
+- 提前提醒分钟数可配、稍后提醒（snooze 10 分钟）、启动时补报错过的提醒、每日小结
+- 到点：桌宠气泡变红闪烁 + 跳跃 + 提示音 + Windows 系统通知
 
-### 🪟 液态玻璃日程面板
-- 实时时钟 + 日历月视图（节日标注）、倒数日 chips、勾选打卡、**连签天数**
-- 5 套玻璃主题，背景是实时模糊取样（真·毛玻璃），可拖动、位置记忆
+### 番茄钟与统计
+- 专注 / 短休 / 长休，自动衔接，可暂停跳过，每天目标
+- 连签天数、21 天热力图、按标签完成率、最出活的时段
+- AI 用量账本（几次调用、多少 token、花了多少钱）
 
-<p align="center"><img src="docs/screens/panel.png" width="320" alt="日程面板"> <img src="docs/screens/tool.png" width="320" alt="工具面板"></p>
+### 更多
+- 🗂 剪贴板历史（本地、可搜、可关）
+- ⏳ 倒计时 / ⏰ 闹钟 / 🪙 抛硬币 / 🏃 抓奶蛙
+- 🗑 拖文件到奶蛙身上 → 它跑过去问你 → 确认后进回收站
+- 🔊 托盘常驻、全局快捷键、开机自启
 
-### 🎛️ 右键切换形态
+### 数据全在本地
+`schedule.txt`、`countdown.txt`、`settings.json` …… 全是可读的纯文本 / JSON，
+可以直接手改、可以 git、可以一键导出导入（导入前会自动备份当前数据）。
+密钥用 Windows DPAPI 加密，界面里永远显示 `••••••`。
 
-<p align="center"><img src="docs/screens/menu.png" width="200" alt="形态菜单"></p>
+---
 
-| 形态 | 能力 |
-| --- | --- |
-| 🤖 奶蛙助手 | 上面那位 |
-| ⏳ 倒计时奶娃 | 1/3/5/10/25 分钟快捷 + 自定义；头顶计时牌，到点三连音 + 跳跃 |
-| ⏰ 闹钟奶娃 | 设定时/分，到点双音循环响铃，点奶蛙停止 |
-| 🪙 抛硬币奶娃 | 填两个选项让它替你做决定，旋转 720° 出结果（也可直接点奶蛙） |
-| 🏃 抓奶蛙 | 小游戏：满屏乱跑、撞墙反弹、**鼠标贴上来会转向逃跑**、计时统计 |
+## 🎨 界面
 
-### 🗑️ 拖文件回收
-把文件（或文件夹、多个一起）**拖到奶蛙身上** → 如果在桌面上，奶蛙会**一路跑过去**停在图标旁问你 `回收「文件名」？` → 确认后进回收站（可还原）+ 旋转大笑；取消 → 自己跑回原位。
+Apple Liquid Glass 风格：真实壁纸模糊采样 + 左上高光 + 1px 边缘折射 + 同心圆角。
+六套主题（奶黄 / 浅色 / 琥珀 / 科技青 / 午夜紫 / 深空灰），桌宠、面板、助手、工具、设置全部统一。
 
-<p align="center"><img src="docs/screens/recycle.png" width="280" alt="回收确认"> <img src="docs/screens/catch.png" width="400" alt="抓奶蛙"></p>
+<p align="center"><img src="docs/screens/panel.png" width="300" alt="日程面板"> <img src="docs/screens/tool.png" width="300" alt="工具面板"></p>
 
 ---
 
 ## 🚀 快速开始
 
-### 方式一：下载绿色版（推荐）
+### 方式一：下载即用（推荐）
 
-1. 到 [**Releases**](../../releases) 下载 `nailong-assistant-vX.Y.Z-win-x64.exe`（免安装单文件）
-2. 双击即用；想固定位置就把它放进 `D:\奶蛙助手` 之类的目录
+到 [**Releases**](../../releases) 或 `dist/` 里拿一个：
+
+| 文件 | 怎么用 |
+| --- | --- |
+| `nailong-assistant-3.2.0-win-x64-portable.exe`（133MB） | **免安装**：双击就跑。你的数据（日程、设置、对话记录）会存在**这个 exe 旁边**，整个文件夹拷走就是完整搬庄 |
+| `nailong-assistant-3.2.0-win-x64.exe`（134MB） | 安装向导：自动建快捷方式，卸载时**不会删你的数据** |
+
+两个都是自带 pi 内核的完整版，不需要你先装 pi、也不需要 Node。
+第一次运行会在旁边生成 `schedule.txt` / `settings.json` / `.userdata/`，都是可直接手改的纯文本。
 
 ### 方式二：从源码运行
 
 ```bash
 git clone https://github.com/wangyiding645/nailong-assistant.git
 cd nailong-assistant
-npm install     # 只装 Electron
+npm install
 npm start
 ```
 
 环境：Windows 10/11 + Node.js 18+。
 
+### 三步用起来
+
+1. 双击 exe（桌宠就蹲在桌面右下角了），右键奶蛙 → **⚙ 设置**
+2. 在「模型接口」里填 **Base URL + API Key**（模型可留空自动检测）—— 这一步只需要做一次
+3. 右键奶蛙 → **🤖 奶蛙助手**，开口使唤：「看看我屏幕上有什么」
+
+> **只想用日程 / 番茄钟 / 提醒 / 桌宠小游戏？完全不用配 Key**，双击就能用。
+> 奶蛙检测到没配接口会自动用内置引擎，并在设置里告诉你去哪填。
+
 ---
 
-## 🧠 技术亮点 & 踩坑记录
+## ✅ 质量
 
-<details>
-<summary><b>架构</b></summary>
+```bash
+npm run check     # 语法自检 + 92 个测试
+npm run audit     # 无头界面自检：六窗口 × 六主题 × 十八分页 × 七形态
+npm run smoke:pi  # 真起一次自带 pi 内核，验证 54 个工具注册（给了接口配置就真发一句）
+npm run dist      # 打出 portable + 安装包
+```
 
-- **Electron 44**，无框 + 透明 + 置顶多窗口：桌宠 / 日程面板 / 助手 / 工具 / 形态菜单
-- 纯本地数据文件（`schedule.txt`、`countdown.txt`、`state.json`），手工可编辑、Git 可备份
-- `preload.js` contextBridge 暴露 IPC；渲染层零 Node 权限
-- AI 循环在**主进程**：`screenshot → tool_call → 执行 → 回传截图 → 再决策`，函数调用格式为标准 OpenAI tools
-- `native/*.ps1` 负责系统脏活：窗口置顶保序、最小化恢复、DPI 感知输入模拟、壁纸模糊取样、桌面图标坐标、回收站
-
-</details>
-
-<details>
-<summary><b>踩过的坑（同行少走弯路）</b></summary>
-
-1. **透明无框窗口 `setPosition` 会撑大窗口**（每次 +1px）→ 一律 `setBounds` 带尺寸移动
-2. **PowerShell 5.1 读无 BOM 的 .ps1 会乱码** → 脚本保持 ASCII，标题等参数由 Node 传参
-3. **精灵表"半透明白肚子"** 会透出壁纸 → 批量把内部 alpha<255 的像素补成不透明
-4. **Win11 桌面图标列表不在 `Progman` 直属子窗口** → 全桌面枚举 `SysListView2` + 祖先含 `Progman/WorkerW` 才算
-5. **跨进程 `LVM_GETITEMRECT`** 的缓冲区地址必须是 `VirtualAllocEx 基址 + 偏移`（漏基址会拿到全 0）
-6. **截图会把奶蛙自己拍进去** → 截图瞬间 `setOpacity(0)` 隐藏自身窗口
-7. **AI 操作时助手窗口失焦** → 📌 图钉：`screen-saver` 层级 + 跨全屏可见 + 看门狗兜底
-
-</details>
+- **92 个测试**：纯逻辑、重复规则、中文自然语言解析、番茄钟状态机、统计、工具、
+  权限分级、危险命令拦截、多协议适配、事件归一、工具桥鉴权、音频素材合法性、
+  会话历史转录、自带 agent 目录的幂等与隔离，以及**真起一个 pi 子进程**验证扩展把 54 个工具注册进去
+- **界面自检**只在“元素真的被裁掉”时才报错：会先找最近的 `overflow` 祖先，可滚动的跳过
+- 启动和打开助手播放用户提供的安迪音频；提醒、计时和互动继续使用原版大笑 `laugh.wav`。重复播放不叠加，关声音会立即停止。播放失败时保持安静，Windows 通知静音。
+- 界面使用稳定的奶油白、云雾白和柔和深色底，不再采样壁纸作为背景。密钥保存成功后可在同一 Windows 账户和数据目录中重启读取；失败会明确报错。
+- 所有 HTML 带 CSP，渲染层零 Node 权限
 
 ---
 
 ## 📁 项目结构
 
 ```
-├─ main.js              主进程：窗口、IPC、AI 循环、抓奶蛙物理、跑位、回收
-├─ preload.js           contextBridge 桥接（含文件拖放捕获）
-├─ renderer/
-│  ├─ pet.js / pet.html      桌宠：动画状态机、气泡、拖动、形态
-│  ├─ popup.js / popup.html  玻璃日程面板（列表/日历/添加）
-│  ├─ assistant.*            奶蛙助手（设置/对话/工具调用/确认）
-│  ├─ tool.*                 倒计时 / 闹钟 / 抛硬币
-│  ├─ menu.*                 右键形态菜单
-│  └─ logic.js               纯逻辑：日程解析、倒数日、节日
-├─ native/             PowerShell 助手（置顶/输入/模糊/桌面坐标/回收站）
-├─ assets/             精灵图、音效、图标
-└─ docs/screens/       README 截图
+main.js                  入口：装配 + 形态切换 + 定时循环
+preload.js               contextBridge（渲染层唯一通道）
+pi-ext/nailong.mjs       pi 扩展：注册工具 + 注册 provider
+renderer/                6 个窗口 + ui.css（Liquid Glass 设计系统）
+src/shared/              纯逻辑：日期、任务、重复规则、自然语言、番茄钟、统计
+src/main/                主进程：store / log / services / windows / host / native / shell / ipc
+  engines/               ★ 双内核：bridge（本地工具桥）/ pi（RPC 引擎）/ index（路由）/ pi-history
+  agent/                 内置引擎：多协议适配、工具循环、权限、用量、记忆、提示词
+  tools/                 54 个工具（两个内核共用同一份定义）
+native/                  PowerShell：输入模拟 / UI Automation / 窗口 / 系统 / 回收站 / 毛玻璃
+test/                    node:test
+scripts/                 语法自检、界面自检
 ```
 
----
-
-## 🗺️ Roadmap
-
-- [ ] 更多助手能力：读剪贴板、批量重命名、定时任务
-- [ ] 一键安装包（NSIS）与自动更新
-- [ ] 更多形态与小游戏（番茄钟、喝水提醒）
-- [ ] 多显示器 / 多 DPI 完善
-- [ ] 英文界面 i18n
-
-欢迎 Issue 许愿 / PR 实现。
+细节见 [架构文档](docs/ARCHITECTURE.md)。
 
 ---
 
 ## ⚠️ 免责声明
 
-- 奶蛙助手会**真实操作你的鼠标键盘**，请先用「每步确认」模式，并避免让它处理付款、删除等重要操作
+- 奶蛙会**真的操作你的鼠标键盘**。第一次用请留在「每步确认」模式，避免让它处理付款、删除等重要操作
 - 拖拽回收走系统回收站（可还原），仍请确认后再点「回收」
+- 截图会发给你配置的模型服务商 —— 这是设计使然，介意就别用视觉相关的工具
 - 本项目与任何模型服务商无关联，接口费用由你的账号承担
+- pi 内核由 [`@earendil-works/pi-coding-agent`](https://www.npmjs.com/package/@earendil-works/pi-coding-agent) 提供（MIT），
+  其余代码为本项目原创
 
 ## 🙏 致谢
 
+- [pi](https://pi.dev) —— 提供内核
 - 角色动画 / 音效素材来自奶蛙（nailong）素材库；如你是原作者并希望调整署名或许可，请开 Issue
 - 灵感来自各类桌面宠物、Tamagotchi 与 "computer use" 智能体
 
@@ -270,4 +253,7 @@ npm start
 
 [MIT](LICENSE) © 2026 wangyiding645
 
-<div align="center"><sub>如果这只小奶蛙让你的桌面更有趣（或者真的帮你干了活），点个 ⭐ 就是最大的鼓励</sub></div>
+<div align="center"><sub>如果这只小奶蛙真的帮你干了活，点个 ⭐ 就是最大的鼓励</sub></div>
+
+
+本次审查及修复记录：[最终审查与验收报告](docs/最终审查与验收报告-20261010.md)。界面自检检查 36 个窗口/主题组合、23 个独立操作步骤、6 个英语标签页面和7个模式状态，并不代表这些维度的全部组合或真实模型验收。

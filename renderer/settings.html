@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: file:; media-src 'self' file:; font-src 'self'; connect-src 'none'; form-action 'none'">
+<title>奶蛙设置</title>
+<link rel="stylesheet" href="ui.css">
+<style>
+  body { background: rgba(20, 16, 10, 0.0); }
+  .card { border-radius: var(--r-xl); }
+  #wrap { display: flex; flex: 1; min-height: 0; }
+  #nav {
+    width: 148px; flex: none; padding: 12px 8px; display: flex; flex-direction: column; gap: 3px;
+    border-right: 1px solid var(--chip-br);
+  }
+  .navitem {
+    padding: 8px 11px; border-radius: 10px; cursor: pointer; font-size: 12.5px; color: var(--fg-mid);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .navitem:hover { background: var(--hover); }
+  .navitem.on { background: var(--accent); color: var(--accent-fg); font-weight: 600; }
+  #nav .ver { margin-top: auto; font-size: 10px; color: var(--fg-dim); text-align: center; padding: 6px; }
+  #main { flex: 1; padding: 16px 18px; min-width: 0; }
+  .page { display: none; }
+  .page.on { display: block; }
+  h3 { font-size: 15px; margin: 0 0 4px; font-weight: 600; }
+  .lead { font-size: 11.5px; color: var(--fg-dim); margin-bottom: 14px; line-height: 1.6; }
+  .fld { margin-bottom: 12px; max-width: 520px; }
+  .fld label { display: block; font-size: 11px; color: var(--fg-dim); margin: 0 3px 5px; }
+  .fld .desc { font-size: 11.5px; color: var(--fg-dim); margin-top: 4px; line-height: 1.6; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 520px; }
+  .switch { display: flex; align-items: center; gap: 10px; padding: 8px 0; font-size: 12.5px; }
+  .switch .track {
+    width: 38px; height: 21px; border-radius: 11px; background: var(--chip); border: 1px solid var(--chip-br);
+    position: relative; cursor: pointer; flex: none; transition: background-color 0.18s;
+  }
+  .switch .track > i {
+    position: absolute; top: 2px; left: 2px; width: 15px; height: 15px; border-radius: 50%;
+    background: var(--fg-dim); transition: transform 0.18s var(--ease), background-color 0.18s;
+  }
+  .switch .track.on { background: var(--ok); border-color: transparent; }
+  .switch .track.on > i { transform: translateX(17px); background: #fff; }
+  .switch .txt { flex: 1; }
+  .switch .txt small { display: block; color: var(--fg-dim); font-size: 11.5px; margin-top: 2px; line-height: 1.6; }
+  .tools { max-width: 620px; }
+  .toolrow { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 9px; font-size: 12px; }
+  .toolrow:hover { background: var(--hover); }
+  .toolrow .nm { font-family: var(--mono); font-size: 11.5px; width: 150px; flex: none; overflow: hidden; text-overflow: ellipsis; }
+  .toolrow .ds { flex: 1; color: var(--fg-dim); font-size: 10.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .memrow { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 9px; font-size: 12px; }
+  .memrow:hover { background: var(--hover); }
+  .memrow .tx { flex: 1; }
+  .memrow .x { opacity: 0; color: var(--fg-dim); cursor: pointer; }
+  .memrow:hover .x { opacity: 1; }
+  .memrow .x:hover { color: var(--danger); }
+  pre.log { font-family: var(--mono); font-size: 10.5px; line-height: 1.5; white-space: pre-wrap; max-height: 220px; overflow: auto; background: rgba(0,0,0,0.18); padding: 10px; border-radius: 10px; }
+  .kv { display: flex; font-size: 12px; padding: 5px 0; }
+  .kv .k { width: 130px; color: var(--fg-dim); flex: none; }
+  .kv .v { font-family: var(--mono); font-size: 11.5px; }
+  .pill { display: inline-block; padding: 2px 9px; border-radius: 999px; background: var(--chip); border: 1px solid var(--chip-br); font-size: 11px; font-family: var(--mono); }
+</style>
+</head>
+<body class="t0">
+  <div class="card">
+    <img id="backdrop" class="backdrop" alt="">
+    <div class="tint"></div>
+    <div class="content" style="padding:0">
+      <div class="topbar" style="padding:10px 14px 0">
+        <div class="avatar"></div>
+        <div class="label" data-i18n="common.settings">奶 蛙 设 置</div>
+        <div class="icobtn" id="minbtn" title="最小化">—</div>
+        <div class="icobtn" id="close" title="关闭">✕</div>
+      </div>
+      <div id="wrap">
+        <div id="nav">
+          <div class="navitem on" data-page="model"><img class="brand-icon" src="../assets/naifrog/icon.png" alt=""><span data-i18n="set.model">模型</span></div>
+          <div class="navitem" data-page="perm"><span>🔐</span><span data-i18n="set.perm">权限</span></div>
+          <div class="navitem" data-page="look"><span>🎨</span><span data-i18n="set.look">外观</span></div>
+          <div class="navitem" data-page="remind"><span>🔔</span><span data-i18n="set.remind">提醒专注</span></div>
+          <div class="navitem" data-page="data"><span>🗄</span><span data-i18n="set.data">数据记忆</span></div>
+          <div class="navitem" data-page="about"><span>ℹ️</span><span data-i18n="set.about">关于</span></div>
+          <div class="ver" id="verLabel"></div>
+        </div>
+        <div id="main" class="scroll">
+
+          <!-- 模型 -->
+          <div class="page on" id="p-model">
+            <div id="onboard" style="display:none;max-width:620px;margin-bottom:16px;padding:14px 16px;border-radius:var(--r-md);background:color-mix(in srgb, var(--accent-solid) 16%, transparent);box-shadow:inset 0 0 0 1px var(--chip-br)">
+              <div style="display:flex;align-items:center;gap:10px">
+                <b style="font-size:14px">欢迎！三步就能用起来</b>
+                <span class="spacer"></span>
+                <div class="btn sm primary" id="onboardDone">好的</div>
+              </div>
+              <div class="lead" style="margin:10px 0 0">
+                <b>1. 选内核</b> — 保持「自动」就好：能用 pi 就用 pi，不行自动退回内置<br>
+                <b>2. 填接口</b> — 下面填 Base URL + API Key（模型可留空自动检测）。已经登录过 pi 的话，这一步可以直接跳过<br>
+                <b>3. 开聊</b> — 右键奶蛙 → 奶蛙助手，或者按 <span class="pill">Ctrl+Alt+N</span><br><br>
+                只想用<b>日程 / 番茄钟 / 提醒 / 桌宠小游戏</b>？那就不用管这一页，直接右键奶蛙就能用。
+              </div>
+            </div>
+
+            <div class="config-tabs" role="tablist" aria-label="助手配置">
+              <button class="config-tab on" data-config="connection" role="tab" aria-selected="true">接口与模型</button>
+              <button class="config-tab" data-config="models" role="tab" aria-selected="false">模型参数</button>
+              <button class="config-tab" data-config="runtime" role="tab" aria-selected="false">运行配置</button>
+              <button class="config-tab" data-config="resources" role="tab" aria-selected="false">资源设置</button>
+            </div>
+            <section class="config-panel" id="config-connection">
+            <h3  data-i18n="set.apiTitle">模型接口</h3>
+            <div class="lead" data-i18n="set.lead.api"></div>
+            <div class="fld"><label>Base URL</label><input id="base" placeholder="https://api.deepseek.com/v1"></div>
+            <div class="fld"><label>API Key</label><input id="key" type="password" placeholder="sk-..."></div>
+            <div class="grid2">
+              <div class="fld"><label>模型</label><input id="model" placeholder="输入服务商提供的模型名称"></div>
+              <div class="fld"><label>协议</label>
+                <select id="provider">
+                  <option value="auto">自动识别</option>
+                  <option value="openai">OpenAI 兼容</option>
+                  <option value="anthropic">Anthropic</option>
+                  <option value="gemini">Google Gemini</option>
+                </select>
+              </div>
+            </div>
+            <div class="row" style="max-width:520px">
+              <button type="button" class="btn primary" id="save">保存</button>
+              <button type="button" class="btn" id="detect">检测模型列表</button>
+              <button type="button" class="btn" id="test">测试连接</button>
+            </div>
+            <div class="fld" style="margin-top:12px"><div id="modelStatus" class="lead" style="margin:0"></div></div>
+            <div class="switch" style="max-width:520px">
+              <div class="track" id="sw-shot"><i></i></div>
+              <div class="txt"><span data-i18n="set.sw.shot"></span><small data-i18n="set.sw.shotHint"></small></div>
+            </div>
+            </section>
+            <section class="config-panel" id="config-models" hidden>
+            <div class="row profile-toolbar"><div class="sect-title grow" style="margin:0">模型目录</div><button class="btn primary" id="saveModelProfile">保存参数</button></div>
+            <div id="profileStatus" class="lead" role="status"></div>
+            <div class="lead">检测列表后可逐个选择；点击模型编辑能力，保存后在对话里切换。</div>
+            <input id="modelSearch" type="search" placeholder="搜索模型名称…" aria-label="搜索模型目录">
+            <div id="modelCatalogList" class="model-catalog"></div>
+            <div class="fld"><label>当前编辑的模型</label><input id="catalogModel" placeholder="可直接输入新模型名称"></div>
+            <div class="grid2">
+              <div class="fld"><label>本模型输出上限（token）</label><input id="maxTokens" type="number" min="256" max="1048576"></div>
+              <div class="fld"><label>随机度（思考模型使用服务商默认值）</label><input id="temperature" type="number" min="0" max="2" step="0.1"></div>
+            </div>
+            <div class="grid2">
+              <div class="fld"><label>本模型思考能力</label><select id="modelReasoning"><option value="false">关闭 / 尚未确认</option><option value="true">服务商支持思考</option></select></div>
+              <div class="fld"><label>本模型图片能力</label><select id="modelVision"><option value="true">支持图片输入</option><option value="false">仅文字</option></select></div>
+            </div>
+            <div class="fld"><label>思考档位和请求方式</label><select id="modelEffort"><option value="standard">标准 · 关闭 / 极简 / 低 / 中 / 高</option><option value="deepseek">DeepSeek · 关闭 / 低 / 高 / 最高</option><option value="extended">完整 · 含很高和最高（服务商需支持）</option><option value="discovered">服务商检测返回的档位</option></select></div>
+            <div class="fld"><label>本模型上下文窗口（token）</label><input id="contextWindow" type="number" min="1024" max="2000000"></div>
+            <div class="desc">能力按服务商说明填写；模型列表接口通常不提供能力信息。</div>
+            </section>
+            <section class="config-panel" id="config-runtime" hidden>
+            <h3 data-i18n="set.engine">推理内核</h3>
+            <div class="lead" data-i18n="set.lead.engine"></div>
+            <div class="fld" style="max-width:620px">
+              <label>pi 内核用哪套配置</label>
+              <select id="piConfig">
+                <option value="bundled">应用自带（推荐）—— 不碰你机器上 pi 的配置</option>
+                <option value="system">沿用机器上 pi 的配置（含它的登录与代理设置）</option>
+              </select>
+              <div class="desc">
+                <span data-i18n="set.lead.piConfig"></span>
+                <br><span class="mono" id="agentDirPath"></span>
+              </div>
+            </div>
+
+            <div class="fld" style="max-width:520px">
+              <label>用哪个内核</label>
+              <select id="engine">
+                <option value="auto">自动（pi 能起来就用 pi，否则退回内置）</option>
+                <option value="pi">pi 内核（推荐，能力最全）</option>
+                <option value="builtin">内置引擎（基础能力，模型对话需要联网）</option>
+              </select>
+            </div>
+            <div id="engineInfo" class="lead" style="margin:0 0 6px"></div>
+            <div id="piWarn" style="display:none;max-width:620px;margin:0 0 10px;padding:10px 12px;border-radius:var(--r-sm);background:color-mix(in srgb, var(--danger) 18%, transparent);box-shadow:inset 0 0 0 1px var(--danger);font-size:11.5px;line-height:1.7"></div>
+            <div class="row" style="max-width:520px;flex-wrap:wrap">
+              <div class="btn sm" id="engineRestart">重启 pi 内核</div>
+              <div class="btn sm" id="piModels">看 pi 能用的模型</div>
+            </div>
+            <div id="piModelList" class="small muted" style="margin-top:8px;max-width:620px"></div>
+
+            <div class="fld"><label>工作区目录</label><div class="row"><input id="workspace" class="grow" placeholder="选择需要助手处理的目录"><button class="btn sm" id="workspaceChoose">选择文件夹</button></div><div class="desc">pi 从此目录加载项目上下文；文件工具仍按你指定的路径操作。</div></div>
+            <div class="switch" style="max-width:560px;margin-top:10px">
+              <div class="track" id="sw-ext"><i></i></div>
+              <div class="txt"><span data-i18n="set.sw.ext"></span><small data-i18n="set.sw.extHint"></small></div>
+            </div>
+
+            <div class="grid2" style="margin-top:8px">
+              <div class="fld">
+                <label>思考强度（当前生效并保存）</label>
+                <select id="thinkingDefault">
+                  <option value="">读取模型支持的档位…</option>
+                  <option value="off">off（最快）</option>
+                  <option value="minimal">minimal</option>
+                  <option value="low">low</option>
+                  <option value="medium">medium（推荐）</option>
+                  <option value="high">high</option>
+
+                </select>
+              </div>
+
+            </div>
+
+            <div class="switch" style="max-width:560px">
+              <div class="track" id="sw-customprovider"><i></i></div>
+              <div class="txt"><span data-i18n="set.sw.customProvider"></span><small data-i18n="set.sw.customProviderHint"></small></div>
+            </div>
+            <div class="switch" style="max-width:560px">
+              <div class="track" id="sw-compact"><i></i></div>
+              <div class="txt">上下文快满时自动压缩<small>让长对话不会因为超限直接报错。</small></div>
+            </div>
+            <div class="switch" style="max-width:560px">
+              <div class="track" id="sw-retry"><i></i></div>
+              <div class="txt">遇到限流/服务端错误自动重试</div>
+            </div>
+
+            <div class="sect-title" data-i18n="set.planTitle">做事方式</div>
+            <div class="switch" style="max-width:560px">
+              <div class="track" id="sw-plan"><i></i></div>
+              <div class="txt"><span data-i18n="set.sw.plan"></span><small data-i18n="set.sw.planHint"></small></div>
+            </div>
+
+            </section>
+            <section class="config-panel" id="config-resources" hidden>
+            <div class="sect-title" data-i18n="set.resTitle">pi 资源开关</div>
+            <div class="switch" style="max-width:560px">
+              <div class="track" id="sw-nomcp"><i></i></div>
+              <div class="txt"><span data-i18n="set.sw.nomcp"></span><small data-i18n="set.sw.nomcpHint"></small></div>
+            </div>
+            <div class="switch" style="max-width:560px">
+              <div class="track" id="sw-noskills"><i></i></div>
+              <div class="txt"><span data-i18n="set.sw.noskills"></span><small data-i18n="set.sw.noskillsHint"></small></div>
+            </div>
+            <div class="switch" style="max-width:560px">
+              <div class="track" id="sw-nocontext"><i></i></div>
+              <div class="txt"><span data-i18n="set.sw.nocontext"></span><small data-i18n="set.sw.nocontextHint"></small></div>
+            </div>
+            <div class="fld" style="max-width:620px">
+              <label>额外加载的 skill（每行一个路径）</label>
+              <textarea id="skillPaths" rows="2" placeholder="D:\\my-skills\\desktop 或 D:\\my-skills\\SKILL.md"></textarea>
+            </div>
+
+            <div class="sect-title" data-i18n="set.mcpTitle">MCP 服务器</div>
+            <div class="lead" style="margin-bottom:8px" data-i18n="set.lead.mcp"></div>
+            <div id="mcpList" style="max-width:620px"></div>
+            <div class="row" style="max-width:620px;margin-top:8px;flex-wrap:wrap">
+              <input id="mcpName" placeholder="服务器名，如 filesystem" style="max-width:200px">
+              <input class="grow" id="mcpJson" placeholder='粘贴配置，如 {"command":"npx","args":["-y","@modelcontextprotocol/server-filesystem","."]}'>
+              <div class="btn sm primary" id="mcpAdd">添加</div>
+              <div class="btn sm" id="mcpReload">刷新</div>
+              <div class="btn sm" id="mcpOpen">打开 mcp.json</div>
+            </div>
+            <div id="mcpStatus" class="lead" style="margin-top:8px;max-width:620px"></div>
+
+            </section>
+          </div>
+
+          <!-- 权限 -->
+          <div class="page" id="p-perm">
+            <h3 data-i18n="set.permTitle">执行权限</h3>
+            <div class="lead" data-i18n="set.lead.perm"></div>
+            <div class="fld">
+              <label>执行模式</label>
+              <select id="policyMode">
+                <option value="confirm">每步确认（推荐，最安全）</option>
+                <option value="auto">自动执行（低风险动作免问）</option>
+                <option value="readonly">只读（只能看，不能动）</option>
+              </select>
+            </div>
+            <div class="fld"><label>单个任务最多调用多少次工具</label><input id="maxSteps" type="number" min="3" max="80"></div>
+            <p class="lead" id="taskDurationHint">任务不设总时长上限，可随时在助手中点击停止。</p>
+            <div class="switch" style="max-width:520px">
+              <div class="track" id="sw-high"><i></i></div>
+              <div class="txt"><span data-i18n="set.sw.high"></span><small data-i18n="set.sw.highHint"></small></div>
+            </div>
+            <div class="sect-title">工具开关（关掉的工具 AI 用不了）</div>
+            <div class="tools" id="toolList"></div>
+          </div>
+
+          <!-- 外观 -->
+          <div class="page" id="p-look">
+            <h3 data-i18n="set.lookTitle">外观</h3>
+            <div class="lead" data-i18n="set.lead.look"></div>
+            <div class="fld">
+              <label>主题</label>
+              <select id="theme">
+                <option value="0">奶油白</option>
+                <option value="1">云雾白</option>
+                <option value="2">暖石灰</option>
+                <option value="3">松林绿</option>
+                <option value="4">暮色蓝</option>
+                <option value="5">夜丁香</option>
+              </select>
+            </div>
+            <div class="fld">
+              <label>语言</label>
+              <select id="locale">
+                <option value="zh-CN">简体中文</option>
+                <option value="en">English（AI 回复语言）</option>
+              </select>
+            </div>
+            <div class="switch" style="max-width:520px">
+              <div class="track" id="sw-sound"><i></i></div>
+              <div class="txt"><span data-i18n="set.sw.sound"></span><small data-i18n="set.sw.soundHint"></small></div>
+            </div>
+            <div class="switch" style="max-width:520px">
+              <div class="track" id="sw-autostart"><i></i></div>
+              <div class="txt"><span data-i18n="set.sw.autostart"></span><small data-i18n="set.sw.autostartHint"></small></div>
+            </div>
+            <div class="sect-title">全局快捷键</div>
+            <div class="grid2">
+              <div class="fld"><label>呼出助手</label><input id="hk-assistant"></div>
+              <div class="fld"><label>开关日程面板</label><input id="hk-panel"></div>
+            </div>
+            <div class="fld"><label>开始专注</label><input id="hk-focus" style="max-width:250px"></div>
+            <div class="desc lead">格式如 <span class="pill">CommandOrControl+Alt+N</span>，改完自动生效。</div>
+          </div>
+
+          <!-- 提醒 / 专注 -->
+          <div class="page" id="p-remind">
+            <h3 data-i18n="set.remindTitle">提醒与专注</h3>
+            <div class="lead" data-i18n="set.lead.remind"></div>
+            <div class="grid2">
+              <div class="fld"><label>默认提前提醒（分钟）</label><input id="preMinutes" type="number" min="0" max="120"></div>
+              <div class="fld"><label>启动时补报多久内错过的提醒</label><input id="catchUp" type="number" min="0" max="720"></div>
+            </div>
+            <div class="fld"><label>每天日程小结时间（留空 = 不发）</label><input id="summaryAt" type="time" style="max-width:250px"></div>
+            <div class="switch" style="max-width:520px">
+              <div class="track" id="sw-toast"><i></i></div>
+              <div class="txt"><span data-i18n="set.sw.toast"></span><small data-i18n="set.sw.toastHint"></small></div>
+            </div>
+            <div class="sect-title">番茄钟</div>
+            <div class="grid2">
+              <div class="fld"><label>专注时长（分钟）</label><input id="focusMin" type="number" min="1" max="180"></div>
+              <div class="fld"><label>每天目标（个）</label><input id="goalPerDay" type="number" min="1" max="24"></div>
+              <div class="fld"><label>短休息（分钟）</label><input id="shortMin" type="number" min="1" max="60"></div>
+              <div class="fld"><label>长休息（分钟）</label><input id="longMin" type="number" min="1" max="120"></div>
+              <div class="fld"><label>几个番茄后长休息</label><input id="cycles" type="number" min="1" max="12"></div>
+            </div>
+            <div class="switch" style="max-width:520px">
+              <div class="track" id="sw-autobreak"><i></i></div>
+              <div class="txt"><span data-i18n="set.sw.autobreak"></span></div>
+            </div>
+            <div class="switch" style="max-width:520px">
+              <div class="track" id="sw-autofocus"><i></i></div>
+              <div class="txt"><span data-i18n="set.sw.autofocus"></span></div>
+            </div>
+
+            <div class="sect-title" data-i18n="set.soundCheck">声音自检</div>
+            <div class="lead" style="margin-bottom:8px" data-i18n="set.lead.sound"></div>
+            <div class="row" style="flex-wrap:wrap">
+              <button class="btn sm" data-sound="happy">试听提醒大笑</button>
+              <button class="btn sm" data-sound="assistantOpen">试听安迪欢迎</button>
+            </div>
+            <div id="audioProbe" class="lead" style="margin-top:10px"></div>
+          </div>
+
+          <!-- 数据 -->
+          <div class="page" id="p-data">
+            <h3 data-i18n="set.dataTitle">数据与记忆</h3>
+            <div class="lead" data-i18n="set.lead.data"></div>
+            <div class="row">
+              <div class="btn" id="export">导出全部数据</div>
+              <div class="btn" id="import">从备份导入（会先自动备份当前数据）</div>
+            </div>
+            <div class="row" style="margin-top:10px">
+              <div class="btn sm" id="openData">打开数据目录</div>
+              <div class="btn sm" id="openLogs">打开日志目录</div>
+              <div class="btn sm" id="clearClip">清空剪贴板历史</div>
+            </div>
+            <div class="switch" style="max-width:520px;margin-top:10px">
+              <div class="track" id="sw-clip"><i></i></div>
+              <div class="txt"><span data-i18n="set.sw.clip"></span><small data-i18n="set.sw.clipHint"></small></div>
+            </div>
+            <div class="fld" style="max-width:250px"><label>最多保留多少条</label><input id="clipLimit" type="number" min="20" max="1000"></div>
+
+            <div class="sect-title">长期记忆（AI 会记住这些）</div>
+            <div class="row" style="max-width:620px">
+              <input class="grow" id="memInput" placeholder="例如：我的项目文档放在 D:\work\docs">
+              <div class="btn sm primary" id="memAdd">记住</div>
+            </div>
+            <div id="memList" style="margin-top:8px;max-width:620px"></div>
+
+            <div class="sect-title">AI 用量</div>
+            <div id="usageBox" class="small muted" style="max-width:620px"></div>
+          </div>
+
+          <!-- 关于 -->
+          <div class="page" id="p-about">
+            <h3 data-i18n="set.aboutTitle">关于奶蛙助手</h3>
+            <div class="lead" data-i18n="set.lead.about"></div>
+            <div id="aboutInfo"></div>
+            <div class="row" style="margin-top:12px">
+              <div class="btn sm" id="checkUpdate">检查更新</div>
+              <div class="btn sm" id="downloadUpdate" style="display:none">下载更新包</div>
+              <div class="btn sm" id="showTranscript" title="把当前会话的历史导成文字">导出当前会话</div>
+            </div>
+            <div id="updateInfo" class="lead" style="margin-top:8px"></div>
+
+            <div class="sect-title">用起来的小技巧</div>
+            <div class="lead">
+              · 说人话就行：「明天下午三点跟设计组过一下方案」它会自己解析时间<br>
+              · 让它干电脑上的活：「把桌面上的截图整理到一个文件夹里」<br>
+              · 问它数据：「我最近两周效率怎么样」「今天还有什么没做」<br>
+              · 想让它记住事：「记住我的项目文档在 D:\work\docs」<br>
+              · 不放心就切「每步确认」，它每个动作都会先问
+            </div>
+            <div class="sect-title">日志（最近 200 行）</div>
+            <pre class="log" id="logBox">加载中…</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+  <script src="audio.js"></script>
+  <script src="i18n.js"></script>
+  <script src="settings.js"></script>
+</body>
+</html>

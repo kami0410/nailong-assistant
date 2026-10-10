@@ -2,284 +2,259 @@
 <html>
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: file:; media-src 'self' file:; font-src 'self'; connect-src 'none'; form-action 'none'">
 <title>奶蛙面板</title>
+<link rel="stylesheet" href="ui.css">
 <style>
-  html, body {
-    margin: 0; padding: 0; width: 100%; height: 100%;
-    overflow: hidden; background: transparent; cursor: default;
-    font-family: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
-    color: #fff; -webkit-user-select: none; user-select: none;
-  }
-  #card {
-    position: absolute; left: 10px; top: 10px; right: 10px; bottom: 10px;
-    border-radius: 26px; overflow: hidden;
-    box-shadow: 0 16px 42px rgba(0,0,0,0.40), inset 0 1px 0 rgba(255,242,205,0.30);
-    border: 1px solid rgba(255,238,195,0.26);
-  }
-  #backdrop { position: absolute; left: -10px; top: -10px; width: 330px; height: 452px; object-fit: cover; }
-  #tint { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
-  #content {
-    position: absolute; left: 0; top: 0; right: 0; bottom: 0;
-    padding: 12px; display: flex; flex-direction: column;
-  }
-  #topbar { display: flex; align-items: center; height: 34px; -webkit-app-region: drag; }
-  #avatar {
-    width: 30px; height: 30px; border-radius: 50%; flex: none; -webkit-app-region: no-drag; cursor: pointer;
-    background-image: url('../assets/naifrog/web-spritesheet.png');
-    background-size: 768px 936px; background-position: -35px -3px;
-    border: 1px solid rgba(255,240,200,0.40);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.35);
-  }
-  #topbar .label { flex: 1; font-size: 11px; letter-spacing: 2px; color: rgba(255,225,165,0.75); margin-left: 10px; }
-  .icobtn {
-    width: 22px; height: 22px; line-height: 22px; text-align: center;
-    font-size: 11px; color: rgba(255,240,205,0.65); border-radius: 50%;
-    cursor: pointer; margin-left: 6px; -webkit-app-region: no-drag;
-    transition: background-color 0.15s, color 0.15s;
-  }
-  .icobtn:hover { color: #fff6e0; background: rgba(255,235,180,0.14); }
-  #soundbtn.off { color: rgba(255,240,205,0.32); }
-  #head { text-align: center; padding: 4px 0 4px; }
-  #clock { font-size: 28px; font-weight: 300; letter-spacing: 1px; line-height: 33px;
-    font-family: "Segoe UI Semilight", "Segoe UI", sans-serif; color: #ffe9a8;
-    text-shadow: 0 1px 3px rgba(60,40,0,0.45); }
-  #date { font-size: 10.5px; letter-spacing: 1.2px; color: rgba(255,240,205,0.80);
-    text-shadow: 0 1px 2px rgba(60,40,0,0.35); }
+  .head { flex: none; }
+  #clock { font-size: 26px; font-weight: 600; letter-spacing: 1px; font-family: var(--mono); line-height: 1.1; }
+  #date { font-size: 11px; color: var(--fg-dim); margin-top: 2px; }
 
-  #cdstrip { display: flex; gap: 6px; overflow-x: auto; padding: 6px 2px 2px; flex: none; }
-  #cdstrip::-webkit-scrollbar { height: 0; }
+  .prog { flex: none; margin-top: 10px; }
+  .bar { height: 6px; border-radius: 3px; background: var(--chip); overflow: hidden; }
+  .bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width 0.4s var(--ease); }
+  .prog-meta { display: flex; align-items: center; margin-top: 5px; font-size: 11px; color: var(--fg-dim); }
+  .prog-meta .streak { margin-left: auto; }
+
+  #cdstrip { flex: none; display: flex; gap: 6px; overflow-x: auto; padding: 10px 0 2px; }
+  #cdstrip::-webkit-scrollbar { height: 3px; }
+  #cdstrip::-webkit-scrollbar-thumb { background: var(--chip-br); border-radius: 2px; }
   .cdchip {
-    flex: none; position: relative; height: 24px; line-height: 24px; padding: 0 10px;
-    border-radius: 12px; font-size: 11px; color: #fff6e0;
-    background: rgba(124,196,127,0.20);
-    border: 1px solid rgba(160,220,160,0.30);
-    white-space: nowrap; cursor: default;
+    flex: none; display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 8px;
+    border-radius: 12px; background: var(--chip); border: 1px solid var(--chip-br);
+    font-size: 11px; color: var(--fg-mid); white-space: nowrap;
   }
-  .cdchip b { color: #b6f0b8; font-weight: 600; margin-left: 4px; }
-  .cdchip.today { background: rgba(246,199,88,0.30); border-color: rgba(255,225,150,0.45); }
-  .cdchip.today b { color: #ffe9a8; }
-  .cdchip .cdx { display: none; margin-left: 6px; color: rgba(255,200,200,0.8); cursor: pointer; }
-  .cdchip:hover .cdx { display: inline; }
-  .cdchip.add { background: rgba(255,235,180,0.12); border-style: dashed; border-color: rgba(255,235,180,0.35); cursor: pointer; }
-  .cdchip.add:hover { background: rgba(255,235,180,0.20); }
+  .cdchip b { color: var(--accent); font-weight: 600; }
+  .cdchip.today { background: var(--accent); color: var(--accent-fg); border-color: transparent; }
+  .cdchip.today b { color: var(--accent-fg); }
+  .cdchip.add { cursor: pointer; }
+  .cdchip .cdx { opacity: 0.5; cursor: pointer; padding-left: 2px; }
+  .cdchip .cdx:hover { opacity: 1; }
 
-  .view { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow-y: auto; }
-  .view.hidden { display: none; }
-  .view::-webkit-scrollbar { width: 0; }
-
-  #listHead { display: flex; align-items: center; padding: 2px 2px 6px; flex: none; }
-  #listTitle { flex: 1; font-size: 11px; color: rgba(255,232,175,0.85); letter-spacing: 0.5px; }
-  #listTitle .hol { color: #ff9a7a; margin-left: 6px; }
-  .linkbtn { font-size: 11px; color: rgba(255,232,175,0.70); cursor: pointer; padding: 2px 8px;
-    border-radius: 10px; background: rgba(255,235,180,0.10); }
-  .linkbtn:hover { background: rgba(255,235,180,0.20); color: #fff6e0; }
-
-  #list { flex: 1; overflow-y: auto; overflow-x: hidden; min-height: 0; padding-right: 2px; }
-  #list::-webkit-scrollbar { width: 4px; }
-  #list::-webkit-scrollbar-thumb { background: rgba(255,235,180,0.22); border-radius: 2px; }
-  .row {
-    position: relative; min-height: 36px; line-height: 36px; margin-bottom: 6px;
-    padding: 0 30px 0 38px; border-radius: 18px; overflow: hidden;
-    background: rgba(255,204,115,0.14);
-    box-shadow: inset 0 1px 0 rgba(255,238,190,0.22);
+  #list { flex: 1; margin-top: 8px; }
+  .row-item {
+    display: flex; align-items: center; gap: 8px; padding: 7px 9px; border-radius: 12px;
+    background: var(--chip); border: 1px solid transparent; margin-bottom: 5px;
   }
-  .row.past { opacity: 0.52; }
-  .row .chk {
-    position: absolute; left: 10px; top: 9px; width: 18px; height: 18px; border-radius: 50%;
-    border: 1.5px solid rgba(255,230,170,0.55); cursor: pointer; line-height: 18px; text-align: center;
-    font-size: 11px; color: transparent; transition: background-color 0.15s, color 0.15s;
+  .row-item:hover { background: var(--hover); }
+  .row-item.done { opacity: 0.5; }
+  .row-item.done .txt { text-decoration: line-through; }
+  .row-item.past:not(.done) .time { color: var(--warn); }
+  .chk {
+    flex: none; width: 18px; height: 18px; line-height: 18px; text-align: center; font-size: 11px;
+    border-radius: 50%; border: 1.5px solid var(--chip-br); color: transparent; cursor: pointer;
   }
-  .row .chk:hover { background: rgba(255,235,180,0.18); }
-  .row.done .chk { background: rgba(124,196,127,0.85); border-color: rgba(160,220,160,0.9); color: #204020; }
-  .row .time { display: inline-block; width: 42px; margin-right: 8px; vertical-align: middle;
-    font-size: 11px; color: rgba(255,222,150,0.72); font-family: Consolas, monospace; }
-  .row .txt { font-size: 12.5px; color: #fff6e0; text-shadow: 0 1px 2px rgba(60,40,0,0.35); }
-  .row.done .txt { color: rgba(235,235,215,0.55); text-decoration: line-through; }
-  .row .tag { font-size: 9px; color: rgba(140,220,145,0.9); margin-left: 6px; }
-  .row .del { position: absolute; right: 8px; top: 0; width: 22px; height: 36px; line-height: 36px;
-    text-align: center; font-size: 11px; color: rgba(255,238,195,0.45); cursor: pointer;
-    opacity: 0; transition: opacity 0.15s, color 0.15s; }
-  .row:hover .del { opacity: 1; }
-  .row .del:hover { color: #ff9a7a; }
-  .empty { padding-top: 36px; text-align: center; font-size: 12px; line-height: 22px;
-    color: rgba(255,240,205,0.70); }
+  .row-item.done .chk { background: var(--ok); color: var(--ok-fg); border-color: transparent; }
+  .chk:hover { border-color: var(--accent); }
+  .row-item .time { flex: none; font-family: var(--mono); font-size: 11.5px; color: var(--fg-mid); }
+  .row-item .txt { flex: 1; min-width: 0; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row-item .del { flex: none; opacity: 0; cursor: pointer; color: var(--fg-dim); font-size: 11px; padding: 0 3px; }
+  .row-item:hover .del { opacity: 1; }
+  .row-item .del:hover { color: var(--danger); }
+  .row-item .act { flex: none; opacity: 0; cursor: pointer; color: var(--fg-dim); font-size: 11px; padding: 0 3px; }
+  .row-item:hover .act { opacity: 1; }
+  .row-item .act:hover { color: var(--accent); }
 
-  #progress { flex: none; padding: 6px 2px 2px; }
-  #progress .bar { height: 6px; border-radius: 3px; background: rgba(255,235,180,0.15); overflow: hidden; }
-  #progress .fill { height: 100%; width: 0%; border-radius: 3px; background: linear-gradient(90deg, rgba(246,199,88,0.95), rgba(124,196,127,0.95)); transition: width 0.3s; }
-  #progress .txt { margin-top: 4px; font-size: 10.5px; color: rgba(255,232,175,0.75); display: flex; }
-  #progress .txt .l { flex: 1; }
-  #progress .txt .r { color: rgba(160,220,160,0.9); }
-  #footer { padding: 8px 0 0; text-align: center; flex: none; }
-  #addbtn {
-    display: inline-block; padding: 0 20px; height: 32px; line-height: 32px;
-    border-radius: 16px; font-size: 13px; color: #4a3a12; cursor: pointer; font-weight: 600;
-    background: rgba(246,199,88,0.90); box-shadow: inset 0 1px 0 rgba(255,255,255,0.45), 0 3px 10px rgba(120,80,0,0.25);
-    transition: background-color 0.15s;
-  }
-  #addbtn:hover { background: rgba(252,212,110,1); }
+  .quick { flex: none; margin-top: 8px; }
+  .quick .row { gap: 6px; }
+  #quickPrev { font-size: 10.5px; color: var(--fg-dim); margin-top: 5px; min-height: 14px; }
+  #quickPrev b { color: var(--accent); }
 
-  #calHead { display: flex; align-items: center; flex: none; padding: 0 2px 2px; }
-  #calTitle { flex: 1; text-align: center; font-size: 13px; color: #ffe9a8; letter-spacing: 1px; }
-  .navbtn { width: 26px; height: 26px; line-height: 26px; text-align: center; border-radius: 50%;
-    cursor: pointer; color: rgba(255,240,205,0.75); font-size: 14px; }
-  .navbtn:hover { background: rgba(255,235,180,0.14); color: #fff6e0; }
-  #calWeek { display: flex; flex: none; }
-  #calWeek div { flex: 1; text-align: center; font-size: 10px; color: rgba(255,232,175,0.60); padding: 1px 0 2px; }
-  #calGrid { display: flex; flex-wrap: wrap; flex: 1; align-content: flex-start; }
+  /* 日历 */
+  #calGrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-top: 8px; }
   .calcell {
-    width: 14.28%; height: 40px; display: flex; flex-direction: column; align-items: center;
-    justify-content: flex-start; padding-top: 2px; cursor: pointer; border-radius: 10px;
+    position: relative; aspect-ratio: 1 / 1; border-radius: 9px; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-size: 11.5px; color: var(--fg-mid); background: var(--chip);
   }
-  .calcell:hover { background: rgba(255,235,180,0.10); }
-  .calcell .d { font-size: 11.5px; color: rgba(255,246,224,0.92); width: 21px; height: 21px; line-height: 21px; text-align: center; border-radius: 11px; }
-  .calcell.other .d { color: rgba(255,246,224,0.28); }
-  .calcell.today .d { box-shadow: inset 0 0 0 1.5px rgba(246,199,88,0.95); }
-  .calcell.sel .d { background: rgba(246,199,88,0.95); color: #4a3a12; font-weight: 700; }
-  .calcell .dots { height: 6px; margin-top: 2px; display: flex; gap: 3px; }
-  .calcell .dot { width: 4px; height: 4px; border-radius: 2px; background: rgba(246,199,88,0.95); }
-  .calcell .dot.cd { background: rgba(124,196,127,0.95); }
-  .calcell .hol { font-size: 8px; color: #ff9a7a; margin-top: 1px; transform: scale(0.92); }
+  .calcell:hover { background: var(--hover); }
+  .calcell.other { opacity: 0.32; }
+  .calcell.today { box-shadow: inset 0 0 0 1.5px var(--accent); color: var(--fg); }
+  .calcell.sel { background: var(--accent); color: var(--accent-fg); font-weight: 600; }
+  .calcell .dots { display: flex; gap: 2px; height: 5px; margin-top: 1px; }
+  .calcell .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--warn); }
+  .calcell .dot.cd { background: var(--info); }
+  .calcell .hol { position: absolute; top: 1px; right: 3px; font-size: 8px; color: var(--danger); }
+  .calcell.sel .hol { color: var(--accent-fg); }
+  .calhead { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-top: 10px; font-size: 10px; color: var(--fg-dim); text-align: center; }
 
-  #viewAdd .addhead { text-align: center; font-size: 12px; color: rgba(255,255,255,0.6); padding: 0 0 2px; }
-  #datechip {
-    display: inline-block; padding: 0 12px; height: 26px; line-height: 26px; border-radius: 13px;
-    font-size: 12px; color: #fff6e0; background: rgba(255,225,160,0.14); cursor: pointer;
-    border: 1px solid rgba(255,235,180,0.25);
-  }
-  #datechip:hover { background: rgba(255,225,160,0.22); }
-  #repeatRow { padding: 6px 0 0; }
-  .repchip { display: inline-block; padding: 0 12px; height: 24px; line-height: 24px; border-radius: 12px;
-    font-size: 11px; margin: 0 4px; color: rgba(255,240,205,0.65); background: rgba(255,235,180,0.10); cursor: pointer; }
-  .repchip.on { background: rgba(246,199,88,0.85); color: #4a3a12; font-weight: 600; }
-  #wheelRow { position: relative; height: 130px; display: flex; justify-content: center; align-items: center; }
-  .wheel {
-    width: 76px; height: 120px; overflow-y: scroll; scroll-snap-type: y mandatory;
-  }
-  .wheel::-webkit-scrollbar { display: none; }
-  .wheel .wsp { height: 45px; }
-  .wheel .wi { height: 30px; line-height: 30px; text-align: center; scroll-snap-align: center;
-    font-size: 15px; color: rgba(255,232,175,0.38); cursor: pointer;
-    font-family: Consolas, monospace; transition: color 0.15s, font-size 0.15s; }
-  .wheel .wi.on { color: #fff6e0; font-size: 19px; font-weight: 600; }
-  #colon { width: 12px; text-align: center; font-size: 18px; color: rgba(255,240,205,0.75); }
-  #wheelBand {
-    position: absolute; left: 50%; width: 168px; margin-left: -84px; top: 50px; height: 30px;
-    border-radius: 10px; background: rgba(255,215,130,0.14);
-    box-shadow: inset 0 1px 0 rgba(255,238,190,0.25);
-    pointer-events: none;
-  }
-  #preview { text-align: center; font-size: 12px; color: rgba(255,240,205,0.85); padding: 0 0 4px;
-    font-family: Consolas, monospace; }
-  #txtin {
-    height: 34px; margin: 0 8px; padding: 0 12px; border: none; border-radius: 17px;
-    background: rgba(255,225,160,0.13); color: #fff6e0; font-size: 13px; outline: none;
-    text-align: center; box-shadow: inset 0 1px 0 rgba(255,238,190,0.18);
-  }
-  #txtin::placeholder { color: rgba(255,240,205,0.38); }
-  #addActions { display: flex; gap: 10px; padding: 8px 8px 0; }
-  #addActions .abtn {
-    flex: 1; height: 34px; line-height: 34px; text-align: center; border-radius: 17px;
-    font-size: 13px; cursor: pointer; transition: background-color 0.15s;
-  }
-  #cancelbtn { background: rgba(255,235,180,0.12); color: rgba(255,240,205,0.85); }
-  #cancelbtn:hover { background: rgba(255,235,180,0.20); }
-  #okbtn { background: rgba(246,199,88,0.90); color: #4a3a12; font-weight: 600;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.45), 0 3px 10px rgba(120,80,0,0.25); }
-  #okbtn:hover { background: rgba(252,212,110,1); }
-  .err { box-shadow: inset 0 0 0 1.5px rgba(255,110,90,0.95) !important; }
+  /* 添加表单 */
+  .fld { margin-bottom: 9px; }
+  .fld label { display: block; font-size: 10.5px; color: var(--fg-dim); margin: 0 3px 4px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .chipwrap { display: flex; flex-wrap: wrap; gap: 5px; }
 
-  body.t0 #tint { background: linear-gradient(180deg, rgba(196,148,38,0.34), rgba(112,78,16,0.46)); }
-  body.t1 #tint { background: linear-gradient(180deg, rgba(255,255,255,0.46), rgba(228,235,245,0.36)); }
-  body.t2 #tint { background: linear-gradient(180deg, rgba(120,72,18,0.40), rgba(70,40,8,0.46)); }
-  body.t3 #tint { background: linear-gradient(180deg, rgba(16,90,110,0.40), rgba(6,50,64,0.48)); }
-  body.t4 #tint { background: linear-gradient(180deg, rgba(88,48,150,0.42), rgba(48,22,90,0.50)); }
-
-  body.t1 #clock { color: #1d1d1f; text-shadow: 0 1px 2px rgba(255,255,255,0.35); }
-  body.t1 #date { color: rgba(30,34,42,0.72); }
-  body.t1 .row { background: rgba(255,255,255,0.30); box-shadow: inset 0 1px 0 rgba(255,255,255,0.55); }
-  body.t1 .row .time { color: rgba(10,90,200,0.80); }
-  body.t1 .row .txt { color: rgba(20,22,28,0.92); text-shadow: none; }
-  body.t1 .row .del { color: rgba(0,0,0,0.35); }
-  body.t1 #topbar .label { color: rgba(30,34,42,0.55); }
-  body.t1 .icobtn { color: rgba(30,34,42,0.60); }
-  body.t1 .wheel .wi { color: rgba(30,34,42,0.35); }
-  body.t1 .wheel .wi.on { color: #1d1d1f; }
-  body.t1 #preview { color: rgba(30,34,42,0.75); }
-  body.t1 #txtin { background: rgba(255,255,255,0.42); color: #1d1d1f; }
-  body.t1 #txtin::placeholder { color: rgba(30,34,42,0.35); }
-  body.t1 #cancelbtn { background: rgba(0,0,0,0.08); color: rgba(30,34,42,0.8); }
-  body.t1 .empty { color: rgba(30,34,42,0.6); }
-  body.t2 #clock { color: #ffe3b8; }
-  body.t3 #clock { color: #b8f2ff; }
-  body.t4 #clock { color: #e9dcff; }
+  /* 统计 */
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
+  .stat {
+    padding: 10px; border-radius: 14px; background: var(--chip); border: 1px solid var(--chip-br);
+  }
+  .stat .v { font-size: 20px; font-weight: 600; font-family: var(--mono); }
+  .stat .k { font-size: 10.5px; color: var(--fg-dim); margin-top: 2px; }
+  #heat { display: grid; grid-template-columns: repeat(21, 1fr); gap: 2px; margin-top: 8px; }
+  #heat i { aspect-ratio: 1 / 1; border-radius: 2px; background: var(--chip); }
+  #heat i.l1 { background: color-mix(in srgb, var(--accent-solid) 34%, transparent); }
+  #heat i.l2 { background: color-mix(in srgb, var(--accent-solid) 58%, transparent); }
+  #heat i.l3 { background: color-mix(in srgb, var(--accent-solid) 80%, transparent); }
+  #heat i.l4 { background: var(--accent); }
+  .tagline { display: flex; align-items: center; gap: 8px; font-size: 11.5px; margin-top: 6px; }
+  .tagline .n { margin-left: auto; color: var(--fg-dim); font-family: var(--mono); }
+  .tagbar { flex: 1; height: 5px; border-radius: 3px; background: var(--chip); overflow: hidden; }
+  .tagbar > i { display: block; height: 100%; background: var(--accent); }
 </style>
 </head>
 <body class="t0">
-  <div id="card">
-    <img id="backdrop" alt="">
-    <div id="tint"></div>
-    <div id="content">
-      <div id="topbar">
-        <div id="avatar" title="点击：恢复为自动跟随宠物"></div>
-        <div class="label">日 程 面 板</div>
-        <div class="icobtn" id="soundbtn" title="提醒音效开关">♪</div>
-        <div class="icobtn" id="themebtn" title="切换主题">色</div>
-        <div class="icobtn" id="close" title="退出程序">✕</div>
+  <div class="card">
+    <img id="backdrop" class="backdrop" alt="">
+    <div class="tint"></div>
+    <div class="content">
+      <div class="topbar">
+        <div class="avatar" id="avatar" data-i18n-title="panel.moveBack"></div>
+        <div class="label" data-i18n="panel.title">奶 蛙 面 板</div>
+        <div class="icobtn" id="statsbtn" data-i18n-title="panel.stats">📊</div>
+        <div class="icobtn" id="themebtn" data-i18n-title="panel.theme">🎨</div>
+        <div class="icobtn" id="soundbtn" data-i18n-title="panel.sound">🔊</div>
+        <div class="icobtn" id="settingsbtn" data-i18n-title="common.settings">⚙</div>
+        <div class="icobtn" id="close" data-i18n-title="common.close">✕</div>
       </div>
-      <div id="head">
+
+      <div class="head">
         <div id="clock">--:--:--</div>
         <div id="date"></div>
       </div>
-      <div id="cdstrip"></div>
 
-      <div class="view" id="viewList">
-        <div id="listHead">
-          <div id="listTitle"></div>
-          <div class="linkbtn" id="openCalBtn">日历</div>
+      <!-- 列表 -->
+      <div class="view on" id="v-list">
+        <div class="prog">
+          <div class="bar"><i id="progFill"></i></div>
+          <div class="prog-meta">
+            <span id="progText"></span>
+            <span class="streak" id="streakText"></span>
+          </div>
         </div>
-        <div id="list"></div>
-        <div id="progress">
-          <div class="bar"><div class="fill" id="progFill"></div></div>
-          <div class="txt"><span class="l" id="progText"></span><span class="r" id="streakText"></span></div>
+        <div id="cdstrip"></div>
+        <div class="row" style="margin-top:8px">
+          <div class="sect-title grow" style="margin:0" id="listTitle"></div>
+          <div class="icobtn" id="addItemBtn" data-i18n-title="panel.addDetail">＋</div>
+          <div class="icobtn" id="openCalBtn" data-i18n-title="panel.calendar">📅</div>
         </div>
-        <div id="footer"><span id="addbtn">＋ 添加日程</span></div>
+        <div class="scroll" id="list"></div>
+        <div class="quick">
+          <div class="row">
+            <input id="quickInput" class="grow" data-i18n-ph="panel.quickAdd" placeholder="说人话就行：明天下午3点评审 #工作">
+            <div class="btn primary sm" id="quickAdd" data-i18n="panel.add">添加</div>
+          </div>
+          <div id="quickPrev"></div>
+        </div>
       </div>
 
-      <div class="view hidden" id="viewCal">
-        <div id="calHead">
-          <div class="navbtn" id="prevMonth">‹</div>
-          <div id="calTitle"></div>
-          <div class="navbtn" id="nextMonth">›</div>
+      <!-- 日历 -->
+      <div class="view" id="v-cal">
+        <div class="row" style="margin-top:10px">
+          <div class="icobtn" id="prevMonth">‹</div>
+          <div class="sect-title grow" style="margin:0;text-align:center" id="calTitle"></div>
+          <div class="icobtn" id="nextMonth">›</div>
+          <div class="btn sm" id="backListBtn" data-i18n="common.back">返回</div>
         </div>
-        <div id="calWeek"><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div><div>日</div></div>
+        <div class="calhead">
+          <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span>
+        </div>
         <div id="calGrid"></div>
-        <div id="footer"><span class="linkbtn" id="backListBtn">返回列表</span></div>
+        <div class="scroll" id="calList" style="margin-top:10px"></div>
       </div>
 
-      <div class="view hidden" id="viewAdd">
-        <div class="addhead" id="addTitle">添加日程</div>
-        <div style="text-align:center"><span id="datechip"></span></div>
-        <div id="repeatRow" style="text-align:center">
-          <span class="repchip" id="repToday">仅这一天</span>
-          <span class="repchip on" id="repDaily">每天重复</span>
+      <!-- 添加 -->
+      <div class="view" id="v-add">
+        <div class="row" style="margin-top:10px">
+          <div class="sect-title grow" style="margin:0" id="addTitle">添加</div>
+          <div class="btn sm" id="cancelAdd" data-i18n="common.cancel">取消</div>
         </div>
-        <div id="wheelRow">
-          <div class="wheel" id="wHour"></div>
-          <div id="colon">:</div>
-          <div class="wheel" id="wMin"></div>
-          <div id="wheelBand"></div>
+        <div class="scroll" style="margin-top:10px">
+          <div class="fld">
+            <label data-i18n="panel.content">内容</label>
+            <input id="addText" placeholder="要做什么？">
+          </div>
+          <div class="fld">
+            <label data-i18n="panel.nlOptional">自然语言（可选，填了就自动解析时间）</label>
+            <input id="addNl" placeholder="明天下午3点半 每周一 提前10分钟">
+          </div>
+          <div class="grid2">
+            <div class="fld"><label data-i18n="panel.date">日期</label><input type="date" id="addDate"></div>
+            <div class="fld"><label data-i18n="panel.time">时间</label><input type="time" id="addTime"></div>
+          </div>
+          <div class="fld">
+            <label data-i18n="panel.repeat">重复</label>
+            <select id="addRepeat">
+              <option value="" data-i18n="panel.repeatNone">不重复</option>
+              <option value="daily" data-i18n="panel.repeatDaily">每天</option>
+              <option value="weekdays" data-i18n="panel.repeatWeekdays">每个工作日</option>
+              <option value="weekends" data-i18n="panel.repeatWeekends">每周末</option>
+              <option value="weekly" data-i18n="panel.repeatWeekly">每周（同一天）</option>
+              <option value="monthly" data-i18n="panel.repeatMonthly">每月（同一号）</option>
+              <option value="yearly" data-i18n="panel.repeatYearly">每年</option>
+              <option value="every:2d">每 2 天</option>
+              <option value="every:3d">每 3 天</option>
+              <option value="every:1w">每 1 周</option>
+              <option value="every:2w">每 2 周</option>
+              <option value="__custom" data-i18n="panel.repeatCustom">自定义…</option>
+            </select>
+            <input id="addRepeatCustom" placeholder="例如 weekly:1,3,5 或 every:2d" style="margin-top:6px;display:none">
+          </div>
+          <div class="grid2">
+            <div class="fld">
+              <label data-i18n="panel.alarm">提前提醒</label>
+              <select id="addAlarm">
+                <option value="" data-i18n="panel.alarmDefault">默认</option>
+                <option value="0" data-i18n="panel.alarmNone">不提醒</option>
+                <option value="5">提前 5 分钟</option>
+                <option value="10">提前 10 分钟</option>
+                <option value="15">提前 15 分钟</option>
+                <option value="30">提前 30 分钟</option>
+                <option value="60">提前 1 小时</option>
+              </select>
+            </div>
+            <div class="fld">
+              <label data-i18n="panel.prio">优先级</label>
+              <select id="addPrio">
+                <option value="mid" data-i18n="panel.prioMid">普通</option>
+                <option value="high" data-i18n="panel.prioHigh">重要 ❗</option>
+                <option value="low" data-i18n="panel.prioLow">不急</option>
+              </select>
+            </div>
+          </div>
+          <div class="fld">
+            <label data-i18n="panel.tag">标签</label>
+            <input id="addTag" placeholder="工作 / 生活 / 学习…">
+          </div>
         </div>
-        <div id="preview">--:--</div>
-        <input id="txtin" maxlength="40" placeholder="事项内容">
-        <div id="addActions">
-          <div class="abtn" id="cancelbtn">取消</div>
-          <div class="abtn" id="okbtn">确认添加</div>
+        <div class="row" style="margin-top:10px">
+          <div class="btn primary grow" id="okAdd" data-i18n="panel.save">保存</div>
+        </div>
+      </div>
+
+      <!-- 统计 -->
+      <div class="view" id="v-stats">
+        <div class="row" style="margin-top:10px">
+          <div class="sect-title grow" style="margin:0" data-i18n="panel.statsTitle">数据统计</div>
+          <div class="btn sm" id="backFromStats" data-i18n="common.back">返回</div>
+        </div>
+        <div class="scroll" style="margin-top:10px">
+          <div class="stat-grid" id="statGrid"></div>
+          <div class="sect-title" data-i18n="panel.recent21">最近 21 天</div>
+          <div id="heat"></div>
+          <div class="sect-title" data-i18n="panel.byTag">按标签（近 30 天）</div>
+          <div id="tagList"></div>
+          <div class="sect-title" data-i18n="panel.aiUsage">AI 用量</div>
+          <div id="usageBox" class="small muted"></div>
         </div>
       </div>
     </div>
   </div>
-  <script src="logic.js"></script>
+  <div class="toast" id="toast"></div>
+  <script src="../src/shared/logic.js"></script>
+  <script src="../src/shared/repeat.js"></script>
+  <script src="../src/shared/task.js"></script>
+  <script src="i18n.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

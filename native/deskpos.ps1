@@ -2,8 +2,8 @@ param([string]$B64)
 $ErrorActionPreference = 'Stop'
 
 $target = ''
-try { $target = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($B64)) } catch { Write-Output 'none'; exit 0 }
-if ([string]::IsNullOrWhiteSpace($target)) { Write-Output 'none'; exit 0 }
+try { $target = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($B64)) } catch { Write-Output ('ok ' + [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('{"found":false}'))); exit 0 }
+if ([string]::IsNullOrWhiteSpace($target)) { Write-Output ('ok ' + [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('{"found":false}'))); exit 0 }
 
 Add-Type -Namespace DP -Name N -MemberDefinition @'
 [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern IntPtr FindWindowEx(IntPtr parent, IntPtr after, string cls, string win);
@@ -58,21 +58,21 @@ $cb = [DP.N+EnumWindowsProc]{
 
 if ($env:DESKPOS_DEBUG) { [Console]::Error.WriteLine("dbg best=" + $script:best + " count=" + $script:bestCount) }
 $lv = $script:best
-if ($lv -eq [IntPtr]::Zero) { Write-Output 'none'; exit 0 }
+if ($lv -eq [IntPtr]::Zero) { Write-Output ('ok ' + [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('{"found":false}'))); exit 0 }
 
 $count = [int][DP.N]::SendMessageW($lv, 0x1004, [IntPtr]::Zero, [IntPtr]::Zero)
-if ($count -le 0) { Write-Output 'none'; exit 0 }
+if ($count -le 0) { Write-Output ('ok ' + [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('{"found":false}'))); exit 0 }
 
 $procId = [uint32]0
 [DP.N]::GetWindowThreadProcessId($lv, [ref]$procId) | Out-Null
 $hp = [DP.N]::OpenProcess(0x38, $false, $procId)
-if ($hp -eq [IntPtr]::Zero) { Write-Output 'none'; exit 0 }
+if ($hp -eq [IntPtr]::Zero) { Write-Output ('ok ' + [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('{"found":false}'))); exit 0 }
 
 $OFF_LV = [IntPtr]0
 $OFF_TX = [IntPtr]512
 $OFF_RC = [IntPtr]2048
 $mem = [DP.N]::VirtualAllocEx($hp, [IntPtr]::Zero, 4096, 0x3000, 0x04)
-if ($mem -eq [IntPtr]::Zero) { [DP.N]::CloseHandle($hp) | Out-Null; Write-Output 'none'; exit 0 }
+if ($mem -eq [IntPtr]::Zero) { [DP.N]::CloseHandle($hp) | Out-Null; Write-Output ('ok ' + [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('{"found":false}'))); exit 0 }
 
 function Read-ItemName([int]$idx) {
   $b = New-Object byte[] 128
@@ -126,7 +126,7 @@ for ($n = 0; $n -lt $count; $n++) {
 if ($found -eq $null) {
   [DP.N]::VirtualFreeEx($hp, $mem, 0, 0x8000) | Out-Null
   [DP.N]::CloseHandle($hp) | Out-Null
-  Write-Output 'none'
+  Write-Output ('ok ' + [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('{"found":false}')))
   exit 0
 }
 
@@ -134,11 +134,14 @@ $c = Read-ItemIconCenter $found
 [DP.N]::VirtualFreeEx($hp, $mem, 0, 0x8000) | Out-Null
 [DP.N]::CloseHandle($hp) | Out-Null
 
-if ($null -eq $c) { Write-Output 'none'; exit 0 }
+if ($null -eq $c) {
+  Write-Output ('ok ' + [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('{"found":false}')))
+  exit 0
+}
 
 $pt = New-Object DP.N+POINT
 $pt.X = $c.X
 $pt.Y = $c.Y
 [DP.N]::ClientToScreen($lv, [ref]$pt) | Out-Null
-Write-Output ('x=' + $pt.X + ';y=' + $pt.Y)
+Write-Output ('ok ' + [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes((@{ found = $true; x = $pt.X; y = $pt.Y } | ConvertTo-Json -Compress))))
 

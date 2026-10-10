@@ -112,6 +112,20 @@ while ($true) {
       }
       'type' { Type-Text $parts[1] }
       'key' { Send-Combo $parts[1] }
+      'drag' {
+        [AI.N]::SetCursorPos([int]$parts[1], [int]$parts[2]) | Out-Null
+        Start-Sleep -Milliseconds 120
+        [AI.N]::mouse_event($MDOWN, 0, 0, 0, [IntPtr]::Zero)
+        $x1 = [int]$parts[1]; $y1 = [int]$parts[2]; $x2 = [int]$parts[3]; $y2 = [int]$parts[4]
+        for ($s = 1; $s -le 24; $s++) {
+          $nx = [int]($x1 + ($x2 - $x1) * $s / 24)
+          $ny = [int]($y1 + ($y2 - $y1) * $s / 24)
+          [AI.N]::SetCursorPos($nx, $ny) | Out-Null
+          Start-Sleep -Milliseconds 16
+        }
+        Start-Sleep -Milliseconds 120
+        [AI.N]::mouse_event($MUP, 0, 0, 0, [IntPtr]::Zero)
+      }
       'scroll' { [AI.N]::mouse_event($WHEEL, 0, 0, [uint32]([int]$parts[1] * -120), [IntPtr]::Zero) }
       'exit' { break }
       default { $ok = $false }
