@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    name: 语法自检 + 测试（Windows）
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      # 按锁文件安装；测试会加载 pi，并读取 Electron 的实际启动路径。
+      - name: 安装依赖
+        run: npm ci --no-audit --no-fund
+
+      - name: 语法自检
+        run: npm run lint:syntax
+
+      - name: 测试
+        run: npm test
+
+  audit:
+    name: 界面自检（带显示器的 Windows）
+    runs-on: windows-latest
+    # 界面自检需要真实桌面会话，默认不开；想跑就把下面这行删掉
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci --no-audit --no-fund
+      - name: 界面自检
+        run: npm run audit

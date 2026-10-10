@@ -2,153 +2,253 @@
 <html>
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: file:; media-src 'self' file:; font-src 'self'; connect-src 'none'; form-action 'none'">
 <title>奶蛙助手 · 对话</title>
+<link rel="stylesheet" href="ui.css">
 <style>
-  html, body {
-    margin: 0; padding: 0; width: 100%; height: 100%;
-    overflow: hidden; background: transparent; cursor: default;
-    font-family: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
-    color: #fff6e0; -webkit-user-select: none; user-select: none;
+  #msgs { flex: 1; padding: 4px 2px; }
+  .msg {
+    max-width: 88%; margin: 7px 0; padding: 8px 11px; border-radius: 14px;
+    font-size: 12.5px; line-height: 1.7; white-space: pre-wrap; word-break: break-word;
   }
-  #card {
-    position: absolute; left: 10px; top: 10px; right: 10px; bottom: 10px;
-    border-radius: 26px; overflow: hidden;
-    background: rgba(96, 68, 20, 0.55);
-    box-shadow: 0 16px 42px rgba(0,0,0,0.40), inset 0 1px 0 rgba(255,242,205,0.30);
-    border: 1px solid rgba(255,238,195,0.26);
+  .msg.user { margin-left: auto; background: var(--accent); color: var(--accent-fg); border-bottom-right-radius: 5px; }
+  .msg.bot { margin-right: auto; background: var(--chip); border: 1px solid var(--chip-br); border-bottom-left-radius: 5px; }
+  .msg.sys { margin: 4px auto; font-size: 11px; color: var(--fg-dim); background: transparent; text-align: center; max-width: 100%; }
+  .msg.err { margin-right: auto; background: color-mix(in srgb, var(--danger) 24%, transparent); border: 1px solid var(--danger); font-size: 12px; }
+  .msg .shot { display: block; margin-top: 6px; max-width: 100%; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.22), inset 0 0 0 1px var(--hairline); }
+  .msg code { font-family: var(--mono); background: rgba(0,0,0,0.20); padding: 1px 5px; border-radius: 6px; font-size: 11.5px; }
+  .msg b, .msg strong { color: var(--fg); }
+  .msg .md-h { display: block; font-weight: 700; margin: 6px 0 2px; }
+  .msg .md-li { display: block; padding-left: 12px; }
+  .msg .md-li:before { content: '· '; margin-left: -10px; color: var(--fg-dim); }
+
+  .tool {
+    margin: 5px 2px; border-radius: var(--r-sm); background-color: var(--chip);
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.02));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), inset 0 0 0 1px var(--chip-br);
+    font-size: 11.5px; overflow: hidden;
   }
-  #backdrop { position: absolute; left: -10px; top: -10px; width: 380px; height: 560px; object-fit: cover; }
-  #tint { position: absolute; left: 0; top: 0; right: 0; bottom: 0;
-    background: linear-gradient(180deg, rgba(196,148,38,0.34), rgba(112,78,16,0.50)); }
-  #content { position: absolute; left: 0; top: 0; right: 0; bottom: 0; padding: 12px; display: flex; flex-direction: column; }
-
-  #topbar { display: flex; align-items: center; height: 32px; -webkit-app-region: drag; flex: none; }
-  #avatar { width: 28px; height: 28px; border-radius: 50%; flex: none;
-    background-image: url('../assets/naifrog/web-spritesheet.png');
-    background-size: 768px 936px; background-position: -35px -3px;
-    border: 1px solid rgba(255,240,200,0.40); box-shadow: 0 2px 8px rgba(0,0,0,0.28); }
-  #topbar .label { flex: 1; font-size: 11px; letter-spacing: 2px; color: rgba(255,225,165,0.8); margin-left: 10px; }
-  .icobtn { width: 22px; height: 22px; line-height: 22px; text-align: center; font-size: 12px;
-    color: rgba(255,240,205,0.65); border-radius: 50%; cursor: pointer; margin-left: 6px; -webkit-app-region: no-drag;
-    transition: background-color 0.15s, color 0.15s; }
-  .icobtn:hover { color: #fff6e0; background: rgba(255,235,180,0.14); }
-  #pin.on { color: #17330f; background: rgba(124,196,127,0.92); }
-  #pin.on:hover { background: rgba(150,215,150,1); }
-
-  .view { flex: 1; display: flex; flex-direction: column; min-height: 0; }
-  .view.hidden { display: none; }
-
-  #setup .fld { margin-top: 10px; }
-  #setup .fld label { display: block; font-size: 11px; color: rgba(255,236,190,0.7); margin: 0 4px 4px; }
-  #setup input {
-    width: 100%; box-sizing: border-box; height: 34px; padding: 0 12px; border: none; border-radius: 12px;
-    background: rgba(255,225,160,0.14); color: #fff6e0; font-size: 12.5px; outline: none;
-    box-shadow: inset 0 1px 0 rgba(255,238,190,0.18);
-  }
-  #setup input::placeholder { color: rgba(255,240,205,0.35); }
-  #setup .hint { margin-top: 12px; font-size: 11px; line-height: 1.7; color: rgba(255,240,205,0.62); }
-  #setup .btn { margin-top: 14px; height: 36px; line-height: 36px; text-align: center; border-radius: 18px;
-    background: rgba(246,199,88,0.92); color: #4a3a12; font-weight: 600; font-size: 13px; cursor: pointer; }
-  #setup .btn:hover { background: rgba(252,212,110,1); }
-  #setupStatus { margin-top: 10px; font-size: 11.5px; line-height: 1.6; color: rgba(255,236,190,0.85); min-height: 18px; }
-  #setupStatus.err { color: #ffb3a0; }
-
-  #msgs { flex: 1; overflow-y: auto; min-height: 0; padding: 6px 2px; }
-  #msgs::-webkit-scrollbar { width: 4px; }
-  #msgs::-webkit-scrollbar-thumb { background: rgba(255,235,180,0.22); border-radius: 2px; }
-  .msg { max-width: 86%; margin: 6px 0; padding: 8px 11px; border-radius: 14px; font-size: 12.5px;
-    line-height: 1.65; white-space: pre-wrap; word-break: break-word; }
-  .msg.user { margin-left: auto; background: rgba(246,199,88,0.88); color: #4a3a12; border-bottom-right-radius: 6px; }
-  .msg.bot { margin-right: auto; background: rgba(255,255,255,0.12); color: #fff6e0; border-bottom-left-radius: 6px;
-    box-shadow: inset 0 1px 0 rgba(255,238,190,0.16); }
-  .msg.sys { margin-left: auto; margin-right: auto; font-size: 11px; color: rgba(255,240,205,0.55); background: transparent; }
-  .msg .shot { display: block; margin-top: 6px; max-width: 150px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.2); }
+  .tool .th { display: flex; align-items: center; gap: 6px; padding: 6px 9px; cursor: pointer; }
+  .tool .th .nm { font-family: var(--mono); color: var(--accent); }
+  .tool .th .ds { flex: 1; color: var(--fg-mid); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tool .th .ms { color: var(--fg-dim); font-size: 10.5px; }
+  .tool .tb { display: none; padding: 0 9px 8px; color: var(--fg-dim); white-space: pre-wrap; word-break: break-word; max-height: 180px; overflow: auto; font-family: var(--mono); font-size: 10.5px; }
+  .tool.open .tb { display: block; }
+  .tool.fail { border-color: var(--danger); }
+  .tool.fail .th .nm { color: var(--danger); }
+  .tool.skip { opacity: 0.6; }
 
   #pending {
-    flex: none; margin: 6px 0 0; padding: 8px 10px; border-radius: 14px;
-    background: rgba(255,120,90,0.20); border: 1px solid rgba(255,160,130,0.45);
-    font-size: 12px; line-height: 1.5;
+    flex: none; margin: 6px 0; padding: 10px 12px; border-radius: var(--r-md);
+    background: color-mix(in srgb, var(--warn) 20%, transparent);
+    border: 1px solid var(--warn);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
   }
-  #pending .desc { color: #ffe9c9; }
-  #pending .acts { margin-top: 8px; display: flex; gap: 8px; }
-  #pending .ab { flex: 1; height: 30px; line-height: 30px; text-align: center; border-radius: 15px;
-    font-size: 12px; cursor: pointer; }
-  #execBtn { background: rgba(124,196,127,0.92); color: #17330f; font-weight: 600; }
-  #execBtn:hover { background: rgba(150,215,150,1); }
-  #skipBtn { background: rgba(255,235,180,0.16); color: rgba(255,240,205,0.85); }
-  #skipBtn:hover { background: rgba(255,235,180,0.26); }
+  #pending .desc { font-size: 12px; line-height: 1.55; }
+  #pending .acts { margin-top: 8px; display: flex; gap: 6px; }
+  #pending .ab { flex: 1; height: 28px; line-height: 28px; text-align: center; border-radius: 14px; font-size: 11.5px; cursor: pointer; background: var(--chip); border: 1px solid var(--chip-br); }
+  #pending .ab.go { background: var(--ok); color: var(--ok-fg); border-color: transparent; font-weight: 600; }
+  #pending .ab.auto { background: var(--accent); color: var(--accent-fg); border-color: transparent; }
+  #pending pre { margin: 4px 0 0; font-family: var(--mono); font-size: 10.5px; color: var(--fg-mid); white-space: pre-wrap; max-height: 90px; overflow: auto; }
 
-  #foot { flex: none; padding-top: 8px; }
-  #toolbar { display: flex; align-items: center; padding: 0 2px 6px; }
-  #shotToggle { font-size: 11px; padding: 0 10px; height: 24px; line-height: 24px; border-radius: 12px;
-    background: rgba(255,235,180,0.12); color: rgba(255,240,205,0.7); cursor: pointer;
-    border: 1px solid rgba(255,235,180,0.22); }
-  #shotToggle.on { background: rgba(124,196,127,0.85); color: #17330f; font-weight: 600; border-color: transparent; }
-  #modeToggle { font-size: 11px; padding: 0 10px; height: 24px; line-height: 24px; border-radius: 12px; margin-left: 6px;
-    background: rgba(255,235,180,0.12); color: rgba(255,240,205,0.7); cursor: pointer;
-    border: 1px solid rgba(255,235,180,0.22); }
-  #modeToggle.on { background: rgba(255,140,90,0.88); color: #3a1c0c; font-weight: 600; border-color: transparent; }
-  #status { flex: 1; text-align: right; font-size: 10.5px; color: rgba(255,240,205,0.55); }
-  #status .sb { cursor: pointer; margin-left: 8px; color: rgba(255,240,205,0.75); }
-  #status .sb:hover { color: #fff6e0; }
-  #inputRow { display: flex; gap: 8px; }
-  #msgInput {
-    flex: 1; height: 36px; padding: 0 12px; border: none; border-radius: 18px;
-    background: rgba(255,225,160,0.14); color: #fff6e0; font-size: 12.5px; outline: none;
-    box-shadow: inset 0 1px 0 rgba(255,238,190,0.18);
+  #composer { flex: none; }
+  .pillrow { display: flex; align-items: center; gap: 6px; padding-bottom: 6px; flex-wrap: wrap; }
+  .pill { height: 24px; line-height: 24px; padding: 0 10px; border-radius: 12px; font-size: 11px; cursor: pointer; background: var(--chip); border: 1px solid var(--chip-br); color: var(--fg-mid); white-space: nowrap; max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
+  .pill:hover { background: var(--hover); color: var(--fg); }
+  .pill.on { background-image: var(--ok-grad); background-color: transparent; color: var(--ok-fg); border-color: transparent; font-weight: 600; }
+  .pill.warn.on { background-image: var(--warn-grad); background-color: transparent; color: var(--warn-fg); }
+  .pill.ghost { background: transparent; border-color: transparent; }
+  .pill.dim { opacity: 0.45; pointer-events: none; }
+  #usage { margin-left: auto; font-size: 10.5px; color: var(--fg-dim); font-family: var(--mono); white-space: nowrap; }
+
+  .note { margin: 6px auto; font-size: 11px; color: var(--fg-dim); text-align: center; max-width: 92%; padding: 5px 10px; border-radius: 10px; background: var(--chip); white-space: pre-wrap; }
+
+  /* 计划审批卡片 */
+  #planBox {
+    flex: none; margin: 6px 0; padding: 10px 12px; border-radius: var(--r-md);
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    border: 1px solid var(--accent);
   }
-  #msgInput::placeholder { color: rgba(255,240,205,0.35); }
-  #sendBtn { width: 64px; height: 36px; line-height: 36px; text-align: center; border-radius: 18px;
-    background: rgba(246,199,88,0.92); color: #4a3a12; font-weight: 600; font-size: 13px; cursor: pointer; }
-  #sendBtn:hover { background: rgba(252,212,110,1); }
-  #sendBtn.busy { opacity: 0.5; cursor: default; }
+  #planBox ol { margin: 8px 0 0; padding-left: 20px; font-size: 12.5px; line-height: 1.75; }
+  #planBox ol li { margin-bottom: 3px; }
+  #planBox .desc { font-size: 12px; line-height: 1.5; }
+  #planBox .acts { margin-top: 10px; display: flex; gap: 6px; }
+  #planBox .ab { flex: 1; height: 28px; line-height: 28px; text-align: center; border-radius: 14px; font-size: 11.5px; cursor: pointer; background: var(--chip); box-shadow: inset 0 0 0 1px var(--chip-br); }
+  #planBox .ab.go { background-image: var(--ok-grad); color: var(--ok-fg); box-shadow: none; font-weight: 600; }
+  #planBox textarea { margin-top: 6px; }
+
+  /* 附件（拖进来的图） */
+  #attachStrip { display: flex; gap: 6px; padding-bottom: 6px; flex-wrap: wrap; }
+  .attach { position: relative; width: 54px; height: 54px; border-radius: 10px; overflow: hidden;
+    box-shadow: inset 0 0 0 1px var(--chip-br); background: var(--chip); }
+  .attach img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .attach .x { position: absolute; top: 1px; right: 3px; cursor: pointer; font-size: 12px;
+    color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
+
+  /* 子代理/嵌套调用的缩进 */
+  .tool.nested { margin-left: 16px; border-left: 2px solid var(--chip-br); }
+  .tool.nested .th .nm { color: var(--fg-mid); }
+
+  /* 模型 / 思考档位 / 命令 的底部选择面板 */
+  #picker {
+    position: absolute; left: 10px; right: 10px; bottom: 10px; max-height: 64%; z-index: 30;
+    background-color: var(--glass-base); background-image: var(--glass-fill), var(--glass-tint);
+    -webkit-backdrop-filter: blur(26px) saturate(180%); backdrop-filter: blur(26px) saturate(180%);
+    border-radius: var(--r-md); box-shadow: var(--shadow-outer), inset 0 0 0 1px var(--hairline);
+    padding: 10px; display: none; flex-direction: column;
+  }
+  #picker.on { display: flex; }
+  .pickrow { display: flex; align-items: center; gap: 8px; padding: 7px 9px; border-radius: 10px; cursor: pointer; font-size: 12px; }
+  .pickrow:hover { background: var(--hover); }
+  .pickrow.cur { background: var(--chip); box-shadow: inset 0 0 0 1px var(--chip-br); }
+  .pickrow .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pickrow .sub { font-size: 10px; color: var(--fg-dim); font-family: var(--mono); flex: none; }
+  .pickrow .k { font-family: var(--mono); color: var(--accent); font-size: 11px; }
+  #inputRow { display: flex; gap: 8px; align-items: flex-end; }
+  #msgInput { flex: 1; min-height: 38px; max-height: 110px; line-height: 1.5; padding: 9px 12px; border-radius: 18px; }
+  #sendBtn { width: 62px; height: 38px; line-height: 38px; text-align: center; border-radius: 19px; background: var(--accent); color: var(--accent-fg); font-weight: 600; font-size: 13px; cursor: pointer; }
+  #sendBtn:hover { background: var(--accent-hi); }
+  #sendBtn.busy { opacity: 0.5; }
+
+  .setup .fld { margin-bottom: 10px; }
+  .setup label { display: block; font-size: 11px; color: var(--fg-dim); margin: 0 3px 4px; }
+  .hint { font-size: 11px; line-height: 1.75; color: var(--fg-dim); margin-top: 10px; }
+  #setupStatus { margin-top: 10px; font-size: 11.5px; line-height: 1.6; min-height: 18px; }
+  #setupStatus.err { color: #ffb3a0; }
+  #setupStatus.ok { color: var(--ok); }
+
+  #sessPanel {
+    position: absolute; inset: 40px 10px 10px 10px; border-radius: 16px; z-index: 20;
+    background: var(--glass-bg); backdrop-filter: blur(16px); border: 1px solid var(--glass-br);
+    box-shadow: var(--shadow); padding: 10px; display: none; flex-direction: column;
+  }
+  #sessPanel.on { display: flex; }
+  .sess { display: flex; align-items: center; gap: 8px; padding: 7px 9px; border-radius: 10px; cursor: pointer; font-size: 12px; }
+  .sess:hover { background: var(--hover); }
+  .sess.cur { background: var(--chip); }
+  .sess .ttl { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sess .tm { font-size: 10px; color: var(--fg-dim); }
+  .sess .x { opacity: 0; color: var(--fg-dim); }
+  .sess:hover .x { opacity: 1; }
+  .sess .x:hover { color: var(--danger); }
 </style>
 </head>
-<body>
-  <div id="card">
-    <img id="backdrop" alt="">
-    <div id="tint"></div>
-    <div id="content">
-      <div id="topbar">
-        <div id="avatar"></div>
-        <div class="label">奶 蛙 助 手</div>
-        <div class="icobtn" id="pin" title="图钉：钉住窗口不被遮挡／不被误关">📌</div>
-        <div class="icobtn" id="gear" title="接口设置">⚙</div>
-        <div class="icobtn" id="close" title="收起（右键奶蛙可再次唤出）">✕</div>
+<body class="t0">
+  <div class="card">
+    <img id="backdrop" class="backdrop" alt="">
+    <div class="tint"></div>
+    <div class="content">
+      <div class="topbar">
+        <div class="avatar"></div>
+        <div class="label" data-i18n="asst.title">奶 蛙 助 手</div>
+        <div class="icobtn" id="sessbtn" title="历史会话">🗂</div>
+        <div class="icobtn on" id="pin" title="钉住窗口">📌</div>
+        <div class="icobtn" id="settingsbtn" title="完整设置">⚙</div>
+        <div class="icobtn" id="close" title="收起">✕</div>
       </div>
 
-      <div class="view hidden" id="setup">
-        <div class="fld"><label>Base URL（OpenAI 兼容）</label><input id="cfgBase" placeholder="https://api.openai.com/v1"></div>
-        <div class="fld"><label>API Key</label><input id="cfgKey" type="password" placeholder="sk-..."></div>
-        <div class="fld"><label>模型名（可留空，自动检测）</label><input id="cfgModel" placeholder="留空自动挑选；需支持图片输入"></div>
-        <div class="hint">· 只需填 <b>Base URL</b> + <b>API Key</b> 即可，模型名留空会自动从 /models 里挑一个<br>
-          · 密钥用 Windows 本机加密保存，不会上传（只有调用时发给该服务商）<br>
-          · 助手默认半自动：每个电脑操作都先让你确认<br>
-          · 按需截图：只有你打开「附带截图」或让它看屏幕时才截屏</div>
-        <div class="btn" id="saveCfg">保存并测试连接</div>
-        <div id="setupStatus"></div>
-      </div>
-
-      <div class="view hidden" id="chat">
-        <div id="msgs"></div>
-        <div id="pending" style="display:none">
-          <div class="desc" id="pendingDesc"></div>
-          <div class="acts"><div class="ab" id="execBtn">执行</div><div class="ab" id="skipBtn">跳过</div><div class="ab" id="autoBtn">本任务自动</div></div>
-        </div>
-        <div id="foot">
-          <div id="toolbar">
-            <span id="shotToggle" title="开启后发送消息时会附带一张当前屏幕截图">📷 附带截图</span>
-            <span id="modeToggle" title="点一下切换：每步确认 / 整个任务自动执行">每步确认</span>
-            <span id="status"></span>
+      <!-- 首次配置 -->
+      <div class="view setup" id="v-setup">
+        <div class="scroll">
+          <div class="fld">
+            <label>接口地址（OpenAI 兼容 / Anthropic / Gemini 都行）</label>
+            <input id="cfgBase" placeholder="https://api.deepseek.com/v1">
           </div>
+          <div class="fld">
+            <label>API Key</label>
+            <input id="cfgKey" type="password" placeholder="sk-...">
+          </div>
+          <div class="fld">
+            <label>模型（留空自动挑一个支持看图的）</label>
+            <input id="cfgModel" placeholder="qwen-vl-max / gpt-4o / claude-sonnet-4 …">
+          </div>
+          <div class="row">
+            <div class="btn primary grow" id="saveCfg">保存并测试</div>
+            <div class="btn" id="detectBtn" title="从 /models 挑一个多模态模型">自动检测</div>
+          </div>
+          <div id="setupStatus"></div>
+          <div class="hint">
+            · 密钥在本机加密保存，调用模型时传给你配置的服务商<br>
+            · 奶蛙能看屏幕（截图 + 无障碍元素树）并真的操作鼠标键盘<br>
+            · 默认每个动作都先问你，可以随时切换成自动执行<br>
+            · 说人话就行：「帮我把今天的日程念一遍」「打开记事本写个备忘」
+          </div>
+        </div>
+      </div>
+
+      <!-- 对话 -->
+      <div class="view" id="v-chat">
+        <div class="scroll" id="msgs"></div>
+        <!-- 计划审批 -->
+      <div id="planBox" style="display:none">
+        <div class="desc" id="planTitle" data-i18n="asst.planTitle">它想这么干，你同意吗？</div>
+        <ol id="planSteps"></ol>
+        <div class="desc" id="planNotes"></div>
+        <div class="acts">
+          <div class="ab go" id="planOk" data-i18n="asst.planOk">批准，开干</div>
+          <div class="ab" id="planEdit" data-i18n="asst.planEdit">改一下</div>
+          <div class="ab" id="planNo" data-i18n="asst.planNo">不行</div>
+        </div>
+      </div>
+
+      <!-- 待执行的电脑操作确认 -->
+      <div id="pending" style="display:none">
+          <div class="desc" id="pendingDesc"></div>
+          <pre id="pendingArgs"></pre>
+          <div class="row" id="pendingAnswer" style="display:none;margin-top:6px">
+            <input class="grow" id="answerInput" placeholder="输入你的回答…">
+          </div>
+          <div class="acts">
+            <div class="ab go" id="execBtn">执行</div>
+            <div class="ab" id="skipBtn">跳过</div>
+            <div class="ab auto" id="autoBtn">本任务自动</div>
+          </div>
+        </div>
+        <div id="composer">
+          <div id="attachStrip" style="display:none"></div>
+          <div class="pillrow">
+            <span class="pill" id="modelPill" title="切换模型">🧠 模型</span>
+            <span class="pill" id="thinkPill" title="推理档位（thinking）">💭 思考</span>
+            <span class="pill" id="shotToggle" title="发送时附带一张当前屏幕">📷 附图</span>
+            <span class="pill warn" id="modeToggle" data-i18n="asst.confirmMode">每步确认</span>
+            <span class="pill ghost" id="moreBtn" title="更多：新对话 / 压缩上下文 / 分叉 / 命令">⋯</span>
+            <span class="pill ghost" id="stopBtn">■ <span data-i18n="asst.stop">停止</span></span>
+            <span id="usage"></span>
+          </div>
+          <div id="workspacePill" title="打开运行配置"></div>
           <div id="inputRow">
-            <input id="msgInput" placeholder="让奶蛙帮你做点什么，例如：看一下屏幕，帮我把微信里未读消息数报给我">
+            <textarea class="grow" id="msgInput" rows="1" data-i18n-ph="asst.sendHint" placeholder="让奶蛙做点什么…（Enter 发送，Shift+Enter 换行）"></textarea>
             <div id="sendBtn">发送</div>
           </div>
         </div>
       </div>
+
+      <div id="picker">
+        <div class="row" style="flex:none">
+          <div class="sect-title grow" style="margin:0" id="pickerTitle">选择</div>
+          <div class="btn sm" id="pickerClose">关闭</div>
+        </div>
+        <input id="pickerSearch" type="search" placeholder="搜索名称或服务商…" aria-label="搜索选项">
+        <div class="scroll" id="pickerList" style="margin-top:8px"></div>
+        <div id="pickerStatus" role="status" aria-live="polite"></div>
+      </div>
+
+      <div id="sessPanel">
+        <div class="row" style="flex:none">
+          <div class="sect-title grow" style="margin:0" data-i18n="asst.sessions">历史会话</div>
+          <div class="btn sm" id="newSessBtn" data-i18n="common.newChat">新对话</div>
+          <div class="btn sm" id="sessClose" data-i18n="common.close">关闭</div>
+        </div>
+        <div class="row" style="flex:none;margin-top:6px">
+          <div class="pill" id="sessTabList" data-i18n="asst.sessionList">对话列表</div>
+          <div class="pill" id="sessTabTree" data-i18n="asst.sessionTree">会话结构</div>
+        </div>
+        <div class="scroll" id="sessList" style="margin-top:8px"></div>
+        <div class="scroll" id="sessTree" style="margin-top:8px;display:none"></div>
+      </div>
     </div>
   </div>
+  <script src="i18n.js"></script>
   <script src="assistant.js"></script>
 </body>
 </html>

@@ -31,4 +31,4 @@ foreach ($b in ($B64 -split ',')) {
     $errs += $_.Exception.Message
   }
 }
-Write-Output ("ok=" + $ok + ";fail=" + $fail + ";err=" + ($errs -join ' | '))
+Write-Output ('ok ' + [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes((@{ ok = $ok; fail = $fail; err = ($errs -join ' | ') } | ConvertTo-Json -Compress))))

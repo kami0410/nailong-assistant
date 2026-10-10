@@ -1,3 +1,6 @@
+<!-- NOTE: this English README is a condensed translation. The Chinese README.md and
+     docs/ARCHITECTURE.md are authoritative and updated first. -->
+
 <div align="center">
 
 <img src="docs/screens/pet.png" width="160" alt="Nailong Assistant">
@@ -15,6 +18,55 @@
 [简体中文](README.md) · [English](README_EN.md)
 
 </div>
+
+---
+
+## 🆕 v3.2 — bundled pi kernel, fully wired
+
+Nailong ships **its own isolated pi configuration** and does **not** read the machine's `~/.pi`
+by default (`PI_CODING_AGENT_DIR` points at `.userdata/pi-agent`; credentials come from Nailong's
+own Base URL + API Key + model, registered as the `nailong` provider).
+
+Why: another tool's config can break the app. Real case found here — `~/.pi/agent/settings.json`
+had an `httpProxy` pointing at a proxy that was not running, so every model request failed with a
+bare `Connection error.`. Now the app is isolated *and* runs a preflight that names the file, the
+port and three ways out. Prefer your existing pi logins (subscriptions)? Switch to
+"use the machine's pi config" in Settings → Model.
+
+
+Nailong now runs **pi as its brain** in a child process (`pi --mode rpc`), while the app keeps
+the hands: screen capture, UI Automation tree, mouse/keyboard, files, system, schedule.
+
+- **54 tools** registered into pi via `pi-ext/nailong.mjs` (schemas streamed from a localhost-only,
+  token-authenticated bridge) — add a tool on our side and pi gets it on next start.
+- **Same permission model for both kernels**: dangerous actions always ask, no matter which brain runs.
+- **Crash-isolated**: if pi dies the pet, schedule and pomodoro keep working and the UI silently
+  falls back to the built-in engine.
+- Switch in Settings: `auto / pi only / builtin only`. Your existing pi credentials and
+  subscription logins are reused automatically.
+- 59 tests (`npm run check`) including an end-to-end test that spawns a real pi process and
+  verifies all 54 tools register. `npm run audit` checks 36 window/theme combinations, 23 view steps, six English-label pages and seven mode states
+  headlessly for real clipping.
+
+See [ARCHITECTURE.md](docs/ARCHITECTURE.md) · [SECURITY.md](docs/SECURITY.md) · [CHANGELOG.md](CHANGELOG.md).
+
+
+### pi capabilities surfaced in the UI (3.2)
+
+| Entry | What it does |
+| --- | --- |
+| 🧠 Model | lists every model pi can use (including subscription logins); one click to switch |
+| 💭 Thinking | reasoning level `off … max`, limited to what the model supports |
+| ⋯ → Compact | manual context compaction; context-window usage shows in the footer |
+| ⋯ → Clone | branch the session; switching sessions replays real history incl. tool calls and screenshots |
+| ⋯ → Commands & skills | pi's slash commands, prompt templates and skills (subagents, council, …) |
+| Settings → Model | auto-compaction, auto-retry, default thinking level, context window |
+| Settings → Model | **load your own pi extensions** (MCP servers, subagents, code mode) — off by default |
+
+The last row is a deliberate trade-off: by default Nailong starts pi with `--no-extensions`, so your
+other pi packages never run next to the app. Turning it on widens the trust boundary to every pi
+package you installed; the UI says so explicitly.
+See [SECURITY.md](docs/SECURITY.md) and [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
@@ -86,7 +138,7 @@ Say *"open Notepad and write tomorrow's meeting note, save it to Desktop"* and i
 
 ### 🪟 Liquid-glass planner
 - Live clock, calendar with holiday labels, countdown chips, check-off, streak counter
-- 5 glass themes, real blurred wallpaper backdrop, draggable & remembered
+- Six quiet cream, white and muted dark themes; stable backgrounds, draggable & remembered
 
 ### 🎛️ Right-click forms
 🤖 Assistant · ⏳ Countdown · ⏰ Alarm · 🪙 Coin flip · 🏃 Catch the frog (it flees your cursor!)
@@ -95,6 +147,24 @@ Say *"open Notepad and write tomorrow's meeting note, save it to Desktop"* and i
 Drop files on the frog → if the icon is on your desktop, **it runs over to the icon** and asks there → confirm → Recycle Bin + spin & laugh.
 
 <p align="center"><img src="docs/screens/recycle.png" width="280" alt="Recycle"> <img src="docs/screens/catch.png" width="400" alt="Catch"></p>
+
+---
+
+## 📦 Download & run (Windows x64)
+
+| File | How to use |
+| --- | --- |
+| `nailong-assistant-3.2.0-win-x64-portable.exe` (133MB) | **No install.** Double-click and it runs. Your data (schedule, settings, conversations) is written **next to the exe**, so copying the folder moves everything. |
+| `nailong-assistant-3.2.0-win-x64.exe` (134MB) | Installer wizard; creates shortcuts and does **not** delete your data on uninstall. |
+
+Both are complete builds with the bundled pi kernel — no Node, no pre-installed pi.
+First run creates `schedule.txt`, `settings.json` and `.userdata/` next to the app, all plain text
+you can edit by hand.
+
+Then: right-click the frog → **⚙ Settings** → fill **Base URL + API Key** once → right-click → **🤖 Assistant**.
+Schedule, pomodoro, reminders and the desktop pet work with **no API key at all**.
+
+Build it yourself: `npm run dist` (both targets).
 
 ---
 

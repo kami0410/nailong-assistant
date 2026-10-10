@@ -4,7 +4,14 @@ node_modules/
 # runtime / user data (never commit)
 .userdata/
 .cache/
+backups/
 agent.json
+agent-sessions.json
+agent-memory.json
+clipboard.json
+focus.json
+reminders.json
+settings.json
 *.cfg
 schedule.txt
 countdown.txt

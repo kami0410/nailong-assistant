@@ -1,89 +1,88 @@
-(function (root) {
+/* 奶蛙助手 · 纯日期/时间/文本工具（无 Electron 依赖，主进程与渲染进程共用）
+ * v3.0：逻辑拆分到 repeat.js / task.js，本文件保持向后兼容的公共 API。
+ * 加载方式：主进程 require('../shared/logic.js')；渲染层 <script src>（挂到 window.WidgetLogic）
+ */
+(function (root, factory) {
+  var api = factory();
+  if (typeof module !== 'undefined' && module.exports) { module.exports = api; }
+  else { root.WidgetLogic = api; }
+})(typeof window !== 'undefined' ? window : this, function () {
+  var CN_WEEK = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+  // ISO 周几：1=周一 … 7=周日
+  var CN_DOW = { '一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '日': 7, '天': 7, '七': 7 };
+
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
-  function trim(s) { return String(s).replace(/^\s+|\s+$/g, ''); }
+  function trim(s) { return String(s == null ? '' : s).replace(/^\s+|\s+$/g, ''); }
   function fmtDateObj(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
   function todayStr(d) { return fmtDateObj(d || new Date()); }
-  function keyOf(it) { return (it.date ? it.date + ' ' : '') + it.time + '|' + it.text; }
+
   function esc(s) {
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
+
+  /** 解析 HH:MM / H:MM / HMM / 8点30 / 8:5 → '08:30' */
   function parseTime(t) {
-    t = trim(t).replace(/\uFF1A/g, ':');
-    var m = /^([01]?[0-9]|2[0-3])(?::?([0-5][0-9]))$/.exec(t);
+    t = trim(t).replace(/：/g, ':');
+    var m = /^([01]?[0-9]|2[0-3])(?::?([0-5][0-9]|[0-5]))$/.exec(t);
     if (!m) { return null; }
     return pad2(parseInt(m[1], 10)) + ':' + pad2(parseInt(m[2], 10));
   }
+
   function parseDate(s) {
-    var m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(trim(s));
+    s = trim(s).replace(/[年月]/g, '-').replace(/[日号]/g, '').replace(/\/|\./g, '-');
+    var m = /^(\d{4})-(\d{1,2})(?:-(\d{1,2}))?$/.exec(s);
     if (!m) { return null; }
-    var y = parseInt(m[1], 10), mo = parseInt(m[2], 10), d = parseInt(m[3], 10);
+    var y = parseInt(m[1], 10), mo = parseInt(m[2], 10), d = m[3] === undefined ? 1 : parseInt(m[3], 10);
     if (mo < 1 || mo > 12 || d < 1 || d > 31) { return null; }
     var dt = new Date(y, mo - 1, d);
     if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) { return null; }
     return y + '-' + pad2(mo) + '-' + pad2(d);
   }
+
   function dateObj(s) {
     var n = parseDate(s);
     if (!n) { return null; }
     var p = n.split('-');
     return new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
   }
-  function byWhen(a, b) {
-    var ka = (a.date || '9999-99-99') + ' ' + a.time;
-    var kb = (b.date || '9999-99-99') + ' ' + b.time;
-    if (ka < kb) { return -1; }
-    if (ka > kb) { return 1; }
-    return 0;
-  }
-  function parseSchedule(text) {
-    var items = [];
-    var lines = String(text || '').split(/\r\n|\r|\n/);
-    for (var i = 0; i < lines.length; i++) {
-      var ln = trim(lines[i]);
-      if (ln === '') { continue; }
-      var date = '';
-      var rest = ln;
-      var dm = /^(\d{4}-\d{1,2}-\d{1,2})\s+(.+)$/.exec(ln);
-      if (dm) {
-        var pd = parseDate(dm[1]);
-        if (!pd) { continue; }
-        date = pd;
-        rest = trim(dm[2]);
-      }
-      var idx = rest.indexOf('|');
-      if (idx < 0) { continue; }
-      var t = parseTime(rest.substring(0, idx));
-      var x = trim(rest.substring(idx + 1));
-      if (!t || x === '') { continue; }
-      items.push({ date: date, time: t, text: x });
-    }
-    items.sort(byWhen);
-    return items;
-  }
-  function serializeSchedule(items) {
-    if (!items.length) { return ''; }
-    return items.map(function (it) {
-      return (it.date ? it.date + ' ' : '') + it.time + '|' + it.text;
-    }).join('\r\n') + '\r\n';
-  }
-  function itemsOn(items, dateStr) {
-    return items.filter(function (it) { return it.date === dateStr || it.date === ''; });
-  }
-  function datedOn(items, dateStr) {
-    return items.filter(function (it) { return it.date === dateStr; });
-  }
-  function daysBetween(aStr, bStr) {
-    var a = dateObj(aStr), b = dateObj(bStr);
-    if (!a || !b) { return null; }
-    return Math.round((b.getTime() - a.getTime()) / 86400000);
-  }
-  function daysUntil(dateStr, from) { return daysBetween(from || todayStr(), dateStr); }
+
+  function isoDow(dateStr) { var d = dateObj(dateStr); if (!d) { return 0; } var w = d.getDay(); return w === 0 ? 7 : w; }
+  function weekdayCn(d) { return CN_WEEK[d.getDay()]; }
+
   function dateAdd(dateStr, n) {
     var d = dateObj(dateStr);
     if (!d) { return null; }
     d.setDate(d.getDate() + n);
     return fmtDateObj(d);
   }
+
+  function daysBetween(aStr, bStr) {
+    var a = dateObj(aStr), b = dateObj(bStr);
+    if (!a || !b) { return null; }
+    return Math.round((b.getTime() - a.getTime()) / 86400000);
+  }
+  function daysUntil(dateStr, from) { return daysBetween(from || todayStr(), dateStr); }
+
+  function addMinutes(hm, n) {
+    var p = String(hm || '00:00').split(':');
+    var total = (parseInt(p[0], 10) || 0) * 60 + (parseInt(p[1], 10) || 0) + n;
+    total = ((total % 1440) + 1440) % 1440;
+    return pad2(Math.floor(total / 60)) + ':' + pad2(total % 60);
+  }
+
+  function hm2min(hm) {
+    var p = String(hm || '0:0').split(':');
+    return (parseInt(p[0], 10) || 0) * 60 + (parseInt(p[1], 10) || 0);
+  }
+
+  function humanDuration(sec) {
+    sec = Math.max(0, Math.round(sec));
+    var h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+    if (h > 0) { return h + ' 小时 ' + m + ' 分'; }
+    if (m > 0) { return m + ' 分 ' + pad2(s) + ' 秒'; }
+    return s + ' 秒';
+  }
+
   var HOLIDAYS = {
     '01-01': '元旦', '02-14': '情人节', '03-08': '妇女节', '04-01': '愚人节',
     '05-01': '劳动节', '05-04': '青年节', '06-01': '儿童节', '07-01': '建党节',
@@ -95,12 +94,14 @@
     if (!n) { return ''; }
     return HOLIDAYS[n.substring(5)] || '';
   }
+
+  // ---------- 倒数日 ----------
   function parseCountdown(text) {
     var list = [];
     var lines = String(text || '').split(/\r\n|\r|\n/);
     for (var i = 0; i < lines.length; i++) {
       var ln = trim(lines[i]);
-      if (ln === '') { continue; }
+      if (ln === '' || ln.charAt(0) === '#') { continue; }
       var idx = ln.indexOf('|');
       if (idx < 0) { continue; }
       var d = parseDate(ln.substring(0, idx));
@@ -112,46 +113,41 @@
     return list;
   }
   function serializeCountdown(list) {
-    if (!list.length) { return ''; }
+    if (!list || !list.length) { return ''; }
     return list.map(function (it) { return it.date + '|' + it.text; }).join('\r\n') + '\r\n';
   }
   function nextCountdowns(list, from, max) {
     var fromStr = from || todayStr();
-    return list
-      .map(function (it) {
-        return { date: it.date, text: it.text, days: daysUntil(it.date, fromStr) };
-      })
+    return (list || [])
+      .map(function (it) { return { date: it.date, text: it.text, days: daysUntil(it.date, fromStr) }; })
       .filter(function (it) { return it.days !== null && it.days >= 0; })
       .sort(function (a, b) { return a.days - b.days; })
       .slice(0, max || 5);
   }
-  function weekdayCn(d) {
-    return ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'][d.getDay()];
-  }
-  var api = {
+
+  return {
+    CN_WEEK: CN_WEEK,
+    CN_DOW: CN_DOW,
     pad2: pad2,
     trim: trim,
     todayStr: todayStr,
     fmtDateObj: fmtDateObj,
-    keyOf: keyOf,
     esc: esc,
     parseTime: parseTime,
     parseDate: parseDate,
     dateObj: dateObj,
-    byWhen: byWhen,
-    parseSchedule: parseSchedule,
-    serializeSchedule: serializeSchedule,
-    itemsOn: itemsOn,
-    datedOn: datedOn,
+    isoDow: isoDow,
+    weekdayCn: weekdayCn,
+    dateAdd: dateAdd,
     daysBetween: daysBetween,
     daysUntil: daysUntil,
-    dateAdd: dateAdd,
+    addMinutes: addMinutes,
+    hm2min: hm2min,
+    humanDuration: humanDuration,
     holiday: holiday,
+    HOLIDAYS: HOLIDAYS,
     parseCountdown: parseCountdown,
     serializeCountdown: serializeCountdown,
-    nextCountdowns: nextCountdowns,
-    weekdayCn: weekdayCn
+    nextCountdowns: nextCountdowns
   };
-  if (typeof module !== 'undefined' && module.exports) { module.exports = api; }
-  else { root.WidgetLogic = api; }
-})(typeof window !== 'undefined' ? window : this);
+});
